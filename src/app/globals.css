@@ -72,6 +72,14 @@ textarea {
   display: block;
 }
 
+.current-time-marker {
+  z-index: 9999;
+}
+
+[data-current-slot="true"] {
+  z-index: 60 !important;
+}
+
 @media (min-width: 640px) {
   .mobile-view-select {
     display: none !important;

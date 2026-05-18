@@ -404,7 +404,7 @@ export function BookingDashboard() {
           src="/brand/Koskovi_logo_znak_white.svg"
           width={71}
         />
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-8 px-5 py-8 lg:px-8">
+        <div className="relative mx-auto flex max-w-[1600px] flex-col gap-8 px-5 py-8 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-4">
               <Image
@@ -496,7 +496,7 @@ export function BookingDashboard() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[1fr_380px] lg:px-8">
+      <section className="mx-auto grid max-w-[1600px] gap-6 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 space-y-6">
           <div className="flex flex-col gap-4 border-b border-[#ded6c9] pb-5 md:flex-row md:items-center md:justify-between">
             <div>
@@ -619,11 +619,11 @@ export function BookingDashboard() {
             viewMode={viewMode}
           />
 
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
           {viewMode === "today" ? (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
-                className="max-h-[680px] max-w-full overflow-auto overscroll-contain"
+                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-auto overscroll-contain"
                 ref={calendarScrollerRef}
               >
                 <div className="min-w-[420px]">
@@ -698,7 +698,7 @@ export function BookingDashboard() {
                           {currentTimeOffset !== null ? (
                             <span
                               aria-hidden="true"
-                              className="pointer-events-none absolute left-0 right-0 z-50 flex items-center"
+                              className="current-time-marker pointer-events-none absolute left-0 right-0 flex items-center"
                               style={{ top: `${currentTimeOffset}%` }}
                             >
                               <span className="time-marker-dot h-2 w-2 -translate-x-1 rounded-full bg-[#0b4d76] shadow-[0_0_0_3px_rgba(143,215,172,0.55)]" />
@@ -741,11 +741,11 @@ export function BookingDashboard() {
           ) : viewMode === "week" ? (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
-                className="max-h-[680px] max-w-full overflow-auto overscroll-contain"
+                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-auto overscroll-contain"
                 ref={calendarScrollerRef}
               >
-                <div className="min-w-[920px]">
-                  <div className="sticky top-0 z-20 grid grid-cols-[88px_repeat(7,minmax(118px,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm">
+                <div className="min-w-[980px] xl:min-w-0">
+                  <div className="sticky top-0 z-20 grid grid-cols-[80px_repeat(7,minmax(112px,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[84px_repeat(7,minmax(128px,1fr))]">
                     <div className="sticky left-0 z-30 bg-[#f6f1e8] px-3 py-3 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
                       Cas
                     </div>
@@ -783,7 +783,7 @@ export function BookingDashboard() {
 
                   {timeSlots.map((time) => (
                     <div
-                      className="grid grid-cols-[88px_repeat(7,minmax(118px,1fr))] border-b border-[#ece3d5] last:border-b-0"
+                      className="grid grid-cols-[80px_repeat(7,minmax(112px,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[84px_repeat(7,minmax(128px,1fr))]"
                       key={time}
                     >
                       <div className="sticky left-0 z-10 bg-[#fcfaf6] px-3 py-3 text-sm font-medium text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.06)]">
@@ -844,7 +844,7 @@ export function BookingDashboard() {
                             {currentTimeOffset !== null ? (
                               <span
                                 aria-hidden="true"
-                                className="pointer-events-none absolute left-0 right-0 z-50 flex items-center"
+                                className="current-time-marker pointer-events-none absolute left-0 right-0 flex items-center"
                                 style={{ top: `${currentTimeOffset}%` }}
                               >
                                 <span className="time-marker-dot h-2 w-2 -translate-x-1 rounded-full bg-[#0b4d76] shadow-[0_0_0_3px_rgba(143,215,172,0.55)]" />
@@ -888,7 +888,7 @@ export function BookingDashboard() {
           ) : (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
-                className="max-h-[680px] max-w-full overflow-auto overscroll-contain"
+                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-auto overscroll-contain"
                 ref={calendarScrollerRef}
               >
                 <div className="min-w-[1720px]">
@@ -1003,7 +1003,7 @@ export function BookingDashboard() {
                               {currentTimeOffset !== null ? (
                                 <span
                                   aria-hidden="true"
-                                  className="pointer-events-none absolute bottom-0 top-0 z-50 flex flex-col items-center"
+                                  className="current-time-marker pointer-events-none absolute bottom-0 top-0 flex flex-col items-center"
                                   style={{ left: `${currentTimeOffset}%` }}
                                 >
                                   <span className="time-marker-dot h-2 w-2 -translate-y-1 rounded-full bg-[#0b4d76] shadow-[0_0_0_3px_rgba(143,215,172,0.55)]" />
@@ -1425,7 +1425,7 @@ function MobileCalendarSummary({
   }
 
   return (
-    <div className="space-y-4 md:hidden">
+    <div className="space-y-4 lg:hidden">
       <div className="overflow-x-auto rounded-lg border border-[#ded6c9] bg-white p-2">
         <div className="flex min-w-max gap-2">
           {days.map((day) => {
