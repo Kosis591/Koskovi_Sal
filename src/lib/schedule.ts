@@ -104,12 +104,21 @@ export function createTimeSlots() {
   return slots;
 }
 
-export function getWeekDays(startDate = new Date("2026-05-18T00:00:00")) {
+export function getWeekDays(startDate = getCurrentWeekStartDate()) {
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + index);
     return date;
   });
+}
+
+function getCurrentWeekStartDate() {
+  const date = new Date();
+  const day = date.getDay() || 7;
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() - day + 1);
+
+  return date;
 }
 
 export function formatDateKey(date: Date) {

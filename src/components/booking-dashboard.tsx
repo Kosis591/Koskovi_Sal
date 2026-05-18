@@ -147,15 +147,18 @@ export function BookingDashboard({
   const todayInfo = initialTodayInfo;
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
 
-  const days = useMemo(() => getWeekDays(), []);
-  const monthDays = useMemo(() => getMonthDays(selectedDate), [selectedDate]);
   const timeSlots = useMemo(() => createTimeSlots(), []);
   const currentDateKey = now ? formatDateKey(now) : "";
   const currentTimeMinutes = now
     ? now.getHours() * 60 + now.getMinutes()
     : null;
-  const todayDate = now ?? new Date();
-  const todayDateKey = currentDateKey || formatDateKey(todayDate);
+  const todayDate = now ?? new Date(`${initialTodayInfo.date}T12:00:00`);
+  const todayDateKey = currentDateKey || initialTodayInfo.date;
+  const days = useMemo(
+    () => getWeekDays(getWeekStartDate(todayDateKey)),
+    [todayDateKey],
+  );
+  const monthDays = useMemo(() => getMonthDays(selectedDate), [selectedDate]);
   const selectedBookings = useMemo(
     () => calendarBookings.filter((booking) => booking.date === selectedDate),
     [calendarBookings, selectedDate],
@@ -262,12 +265,18 @@ export function BookingDashboard({
       return;
     }
 
+    const animationFrame = window.requestAnimationFrame(() => {
+      scrollCurrentTimeIntoView(calendarScrollerRef.current);
+    });
     const timeout = window.setTimeout(() => {
       scrollCurrentTimeIntoView(calendarScrollerRef.current);
-    }, 80);
+    }, 250);
 
-    return () => window.clearTimeout(timeout);
-  }, [viewMode, now]);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeout);
+    };
+  }, [currentDateKey, viewMode, now]);
 
   async function syncCalendar() {
     setIsSyncing(true);
@@ -675,7 +684,7 @@ export function BookingDashboard({
                     );
                     const currentTimeOffset =
                       currentTimeMinutes !== null
-                        ? getCurrentTimeOffset(time, currentTimeMinutes)
+                        ? getCurrentTimeOffset(todayDate, time, currentTimeMinutes)
                         : null;
 
                     return (
@@ -816,7 +825,7 @@ export function BookingDashboard({
                           getSlotState(dateKey, time);
                         const currentTimeOffset =
                           dateKey === currentDateKey && currentTimeMinutes !== null
-                            ? getCurrentTimeOffset(time, currentTimeMinutes)
+                            ? getCurrentTimeOffset(day, time, currentTimeMinutes)
                             : null;
                         return (
                           <button
@@ -974,7 +983,7 @@ export function BookingDashboard({
                           const currentTimeOffset =
                             dateKey === currentDateKey &&
                             currentTimeMinutes !== null
-                              ? getCurrentTimeOffset(time, currentTimeMinutes)
+                              ? getCurrentTimeOffset(day, time, currentTimeMinutes)
                               : null;
 
                           return (
@@ -1524,6 +1533,14 @@ function getMonthDays(dateKey: string) {
   return days;
 }
 
+function getWeekStartDate(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+
+  return date;
+}
+
 function getSlotStateKey(dateKey: string, time: string) {
   return `${dateKey}|${time}`;
 }
@@ -1666,11 +1683,26 @@ function canMergeSegments(
   );
 }
 
-function getCurrentTimeOffset(slotStart: string, currentMinutes: number) {
+function getCurrentTimeOffset(
+  date: Date,
+  slotStart: string,
+  currentMinutes: number,
+) {
+  const openingHours = getOpeningHoursForDate(date);
+
+  if (!openingHours) {
+    return null;
+  }
+
   const start = timeToMinutes(slotStart);
   const end = start + hallSettings.slotMinutes;
+  const dayEnd = timeToMinutes(openingHours.end);
 
   if (currentMinutes < start || currentMinutes >= end) {
+    if (currentMinutes >= dayEnd && start < dayEnd && end >= dayEnd) {
+      return 100;
+    }
+
     return null;
   }
 
