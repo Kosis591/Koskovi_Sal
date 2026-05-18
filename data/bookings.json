@@ -1,20 +1,5 @@
 [
   {
-    "title": "Jan Kosek",
-    "organizer": "Jan Kosek",
-    "date": "2026-05-18",
-    "start": "18:30",
-    "end": "18:00",
-    "cleanupRequired": true,
-    "createdBy": "pepe",
-    "status": "confirmed",
-    "note": "Telefon: +420 222333444\nE-mail: honzik.kosek@gmail.com",
-    "createdAt": "2026-05-18T17:02:58.393Z",
-    "id": "1a9c1a33-8e1d-42d2-8062-9fed694484ef",
-    "cleanedAt": "2026-05-18T17:03:24.796Z",
-    "cleanedBy": "public"
-  },
-  {
     "id": "recurring-practise-2026-05-19",
     "title": "Practise",
     "organizer": "Koskovi",

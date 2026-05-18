@@ -22,7 +22,6 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
-  bookings,
   createTimeSlots,
   getOpeningHoursForDate,
   getOpeningHoursGroups,
@@ -36,6 +35,7 @@ import {
   type Booking,
   type BookingRequest,
 } from "@/lib/schedule";
+import type { TodayInfo } from "@/lib/today-info";
 
 const dayFormatter = new Intl.DateTimeFormat("cs-CZ", {
   weekday: "short",
@@ -97,40 +97,50 @@ type DayAvailabilitySegment =
       title: string;
     };
 
-type TodayInfo = {
-  dateLabel: string;
-  holidayName: string | null;
-  isHoliday: boolean;
-  nameDay: string | null;
-  source: "fallback" | "svatkyapi";
-  weekLabel: string;
-};
-
 type SlotState = {
   booking?: Booking;
   cleanupBooking?: Booking;
   isOpen: boolean;
 };
 
-export function BookingDashboard() {
-  const [selectedDate, setSelectedDate] = useState("2026-05-20");
+type BookingDashboardProps = {
+  initialBookings: Booking[];
+  initialSession: {
+    authenticated: boolean;
+    username: string | null;
+  };
+  initialTodayInfo: TodayInfo;
+};
+
+export function BookingDashboard({
+  initialBookings,
+  initialSession,
+  initialTodayInfo,
+}: BookingDashboardProps) {
+  const [selectedDate, setSelectedDate] = useState(initialTodayInfo.date);
   const [viewMode, setViewMode] = useState<"today" | "week" | "month">(
     "week",
   );
-  const [request, setRequest] = useState(initialRequest);
+  const [request, setRequest] = useState({
+    ...initialRequest,
+    date: initialTodayInfo.date,
+  });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    initialSession.authenticated,
+  );
+  const isCheckingSession = false;
   const [authError, setAuthError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
   const [cleanupMessage, setCleanupMessage] = useState("");
   const [cleaningBookingId, setCleaningBookingId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [calendarBookings, setCalendarBookings] = useState<Booking[]>(bookings);
+  const [calendarBookings, setCalendarBookings] =
+    useState<Booking[]>(initialBookings);
   const [isSyncing, setIsSyncing] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
-  const [todayInfo, setTodayInfo] = useState<TodayInfo | null>(null);
+  const todayInfo = initialTodayInfo;
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
 
   const days = useMemo(() => getWeekDays(), []);
@@ -232,35 +242,6 @@ export function BookingDashboard() {
       cleanupBooking: undefined,
       isOpen: false,
     };
-
-  useEffect(() => {
-    async function loadSession() {
-      const response = await fetch("/api/auth/session");
-      const session = (await response.json()) as { authenticated: boolean };
-      setIsAuthenticated(session.authenticated);
-      setIsCheckingSession(false);
-    }
-
-    void loadSession();
-  }, []);
-
-  useEffect(() => {
-    void syncCalendar();
-  }, []);
-
-  useEffect(() => {
-    async function loadTodayInfo() {
-      try {
-        const response = await fetch("/api/today-info", { cache: "no-store" });
-        const info = (await response.json()) as TodayInfo;
-        setTodayInfo(info);
-      } catch {
-        setTodayInfo(null);
-      }
-    }
-
-    void loadTodayInfo();
-  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setNow(new Date()), 0);
@@ -893,17 +874,17 @@ export function BookingDashboard() {
               >
                 <div className="min-w-[1720px]">
                   <div
-                    className="sticky top-0 z-20 grid border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm"
+                    className="sticky top-0 z-[80] grid border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm"
                     style={{
                       gridTemplateColumns: `128px repeat(${timeSlots.length}, minmax(86px, 1fr))`,
                     }}
                   >
-                    <div className="sticky left-0 z-30 bg-[#f6f1e8] px-3 py-3 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
+                    <div className="sticky left-0 z-[90] bg-[#f6f1e8] px-3 py-3 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
                       Den
                     </div>
                     {timeSlots.map((time) => (
                       <div
-                        className="border-l border-[#ded6c9] px-2 py-3 text-center text-xs font-semibold text-[#66706f]"
+                        className="bg-[#f6f1e8] px-2 py-3 text-center text-xs font-semibold text-[#66706f] shadow-[inset_1px_0_0_#ded6c9]"
                         key={time}
                       >
                         {time}
@@ -918,16 +899,16 @@ export function BookingDashboard() {
 
                     return (
                       <div
-                        className="grid border-b border-[#ece3d5] last:border-b-0"
+                        className="grid min-h-16 border-b border-[#ece3d5] last:border-b-0"
                         key={dateKey}
                         style={{
                           gridTemplateColumns: `128px repeat(${timeSlots.length}, minmax(86px, 1fr))`,
                         }}
                       >
                         <button
-                          className={`sticky left-0 z-10 border-r border-[#ece3d5] px-3 py-2 text-left transition ${
+                          className={`sticky left-0 z-40 min-h-16 border-r border-[#ece3d5] px-3 py-2 text-left transition ${
                             isSelected
-                              ? "selected-period-head z-20 border-r-[#0b4d76] bg-[#0b4d76] text-white ring-1 ring-white/50 shadow-[0_14px_26px_rgba(0,55,88,0.32),inset_-5px_0_0_#8fd7ac]"
+                              ? "selected-period-head z-50 border-r-[#0b4d76] bg-[#0b4d76] text-white ring-1 ring-white/50 shadow-[0_14px_26px_rgba(0,55,88,0.32),inset_-5px_0_0_#8fd7ac]"
                               : "bg-[#fcfaf6] text-[#132935] shadow-[4px_0_10px_rgba(19,41,53,0.06)] hover:bg-[#fbf8f1]"
                           }`}
                           onClick={() => {
@@ -959,7 +940,7 @@ export function BookingDashboard() {
 
                           return (
                             <button
-                              className={`relative min-h-12 border-l border-[#ece3d5] px-1.5 py-2 text-left text-[11px] transition ${
+                              className={`relative min-h-16 border-l border-[#ece3d5] px-1.5 py-3 text-left text-[11px] transition ${
                                 !isOpen
                                   ? isSelected
                                     ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"

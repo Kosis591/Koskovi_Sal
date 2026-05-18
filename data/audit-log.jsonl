@@ -7,3 +7,4 @@
 {"action":"booking.update","actor":"pepe","bookingId":"recurring-practise-2026-05-19","details":{"date":"2026-05-19","end":"19:30","start":"17:30","title":"Practise"},"timestamp":"2026-05-18T17:02:30.731Z"}
 {"action":"booking.create","actor":"pepe","bookingId":"1a9c1a33-8e1d-42d2-8062-9fed694484ef","details":{"date":"2026-05-18","end":"18:00","start":"18:30","title":"Jan Kosek"},"timestamp":"2026-05-18T17:02:58.400Z"}
 {"action":"booking.clean","actor":"public","bookingId":"1a9c1a33-8e1d-42d2-8062-9fed694484ef","details":{"date":"2026-05-18","title":"Jan Kosek"},"timestamp":"2026-05-18T17:03:24.803Z"}
+{"action":"booking.delete","actor":"pepe","bookingId":"1a9c1a33-8e1d-42d2-8062-9fed694484ef","details":{"date":"2026-05-18","end":"18:00","start":"18:30","title":"Jan Kosek"},"timestamp":"2026-05-18T18:52:39.162Z"}
