@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 export const adminSessionCookie = "koskovi_admin_session";
@@ -7,15 +7,19 @@ const devPassword = "koskovi-admin";
 const devSecret = "local-development-session-secret";
 
 type AdminCredential = {
+  password?: string;
+  passwordHash?: string;
   username: string;
-  password: string;
 };
 
 function getAdminCredentials(): AdminCredential[] {
   return [
     {
       username: process.env.ADMIN_USERNAME ?? "kosis",
-      password: process.env.ADMIN_PASSWORD ?? devPassword,
+      password: process.env.ADMIN_PASSWORD_HASH
+        ? undefined
+        : process.env.ADMIN_PASSWORD ?? devPassword,
+      passwordHash: process.env.ADMIN_PASSWORD_HASH,
     },
     {
       username: "JB",
@@ -50,7 +54,7 @@ export function isAdminCredentials(username: string, password: string) {
   return getAdminCredentials().some(
     (credential) =>
       safeCompare(normalizedUsername, normalizeUsername(credential.username)) &&
-      safeCompare(password, credential.password),
+      isPasswordValid(password, credential),
   );
 }
 
@@ -101,6 +105,35 @@ function safeCompare(left: string, right: string) {
   }
 
   return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function isPasswordValid(password: string, credential: AdminCredential) {
+  if (credential.passwordHash) {
+    return verifyPasswordHash(password, credential.passwordHash);
+  }
+
+  if (!credential.password) {
+    return false;
+  }
+
+  return safeCompare(password, credential.password);
+}
+
+function verifyPasswordHash(password: string, passwordHash: string) {
+  const [scheme, salt, key] = passwordHash.split("$");
+
+  if (scheme !== "scrypt" || !salt || !key) {
+    return false;
+  }
+
+  const expectedKey = Buffer.from(key, "hex");
+  const actualKey = scryptSync(password, salt, expectedKey.length);
+
+  if (actualKey.length !== expectedKey.length) {
+    return false;
+  }
+
+  return timingSafeEqual(actualKey, expectedKey);
 }
 
 function normalizeUsername(username: string) {
