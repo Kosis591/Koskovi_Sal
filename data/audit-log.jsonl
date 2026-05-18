@@ -1,0 +1,9 @@
+{"action":"booking.create","actor":"kosis","bookingId":"da1dd409-1bf5-40de-a337-6bddd5d93eb6","details":{"date":"2026-05-18","end":"18:00","start":"17:00","title":"asd"},"timestamp":"2026-05-18T11:45:26.049Z"}
+{"action":"booking.update","actor":"kosis","bookingId":"da1dd409-1bf5-40de-a337-6bddd5d93eb6","details":{"date":"2026-05-18","end":"18:00","start":"17:00","title":"asd"},"timestamp":"2026-05-18T13:14:08.819Z"}
+{"action":"booking.delete","actor":"kosis","bookingId":"da1dd409-1bf5-40de-a337-6bddd5d93eb6","details":{"date":"2026-05-18","end":"18:00","start":"17:00","title":"asd"},"timestamp":"2026-05-18T13:15:27.057Z"}
+{"action":"booking.create","actor":"pepe","bookingId":"80cfde8e-e455-4c1e-bfcf-10ea4b74480b","details":{"date":"2026-05-18","end":"18:40","start":"18:00","title":"asd"},"timestamp":"2026-05-18T16:26:34.475Z"}
+{"action":"booking.clean","actor":"public","bookingId":"80cfde8e-e455-4c1e-bfcf-10ea4b74480b","details":{"date":"2026-05-18","title":"asd"},"timestamp":"2026-05-18T17:01:08.389Z"}
+{"action":"booking.delete","actor":"kosis","bookingId":"80cfde8e-e455-4c1e-bfcf-10ea4b74480b","details":{"date":"2026-05-18","end":"18:40","start":"18:00","title":"asd"},"timestamp":"2026-05-18T17:01:53.299Z"}
+{"action":"booking.update","actor":"pepe","bookingId":"recurring-practise-2026-05-19","details":{"date":"2026-05-19","end":"19:30","start":"17:30","title":"Practise"},"timestamp":"2026-05-18T17:02:30.731Z"}
+{"action":"booking.create","actor":"pepe","bookingId":"1a9c1a33-8e1d-42d2-8062-9fed694484ef","details":{"date":"2026-05-18","end":"18:00","start":"18:30","title":"Jan Kosek"},"timestamp":"2026-05-18T17:02:58.400Z"}
+{"action":"booking.clean","actor":"public","bookingId":"1a9c1a33-8e1d-42d2-8062-9fed694484ef","details":{"date":"2026-05-18","title":"Jan Kosek"},"timestamp":"2026-05-18T17:03:24.803Z"}

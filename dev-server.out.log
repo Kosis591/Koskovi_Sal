@@ -1,0 +1,135 @@
+
+> budeme-vytv-et-aplikaci-v-reactu@0.1.0 dev
+> next dev --port 3000
+
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.21.145:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1953ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.9s (729 modules)
+ GET / 200 in 3513ms
+ GET / 200 in 273ms
+ ✓ Compiled /api/today-info in 302ms (450 modules)
+ ✓ Compiled in 247ms (288 modules)
+ GET /api/auth/session 200 in 625ms
+ GET /favicon.ico 200 in 889ms
+ GET /api/availability 200 in 763ms
+ GET /api/availability 200 in 768ms
+ GET /api/auth/session 200 in 91ms
+ GET /favicon.ico 200 in 114ms
+ GET /api/today-info 200 in 890ms
+ GET /api/today-info 200 in 875ms
+ GET / 200 in 165ms
+ GET /favicon.ico 200 in 11ms
+ ✓ Compiled in 452ms (721 modules)
+ GET / 200 in 157ms
+ ✓ Compiled in 424ms (721 modules)
+ GET / 200 in 126ms
+ ✓ Compiled in 266ms (721 modules)
+ GET / 200 in 91ms
+ GET / 500 in 329ms
+ ✓ Compiled /favicon.ico in 116ms (450 modules)
+ GET /favicon.ico 500 in 162ms
+ ✓ Compiled in 349ms (738 modules)
+ ✓ Compiled in 246ms (738 modules)
+ ✓ Compiled in 265ms (721 modules)
+ ✓ Compiled in 214ms (721 modules)
+ ✓ Compiled in 309ms (721 modules)
+ ✓ Compiled in 244ms (721 modules)
+ ✓ Compiled in 255ms (721 modules)
+ ✓ Compiled in 319ms (721 modules)
+ ✓ Compiled in 229ms (721 modules)
+ ✓ Compiled in 298ms (721 modules)
+ GET / 200 in 199ms
+ ✓ Compiled /favicon.ico in 337ms (459 modules)
+ ✓ Compiled (469 modules)
+ GET /favicon.ico 200 in 583ms
+ GET /api/auth/session 200 in 601ms
+ GET /api/availability 200 in 611ms
+ GET /favicon.ico 200 in 17ms
+ GET /favicon.ico 200 in 17ms
+ GET /api/today-info 200 in 718ms
+ ✓ Compiled /admin in 462ms (759 modules)
+ GET /admin 200 in 543ms
+ ✓ Compiled /api/bookings/[id]/clean in 212ms (762 modules)
+ POST /api/bookings/80cfde8e-e455-4c1e-bfcf-10ea4b74480b/clean 200 in 731ms
+ GET /api/availability 200 in 77ms
+ ✓ Compiled in 129ms (294 modules)
+ GET /admin 200 in 280ms
+ GET /admin 200 in 49ms
+ GET /favicon.ico 200 in 16ms
+ ✓ Compiled in 139ms (294 modules)
+ GET /admin 200 in 63ms
+ GET /favicon.ico 200 in 11ms
+ GET /favicon.ico 200 in 48ms
+ GET /api/auth/session 200 in 62ms
+ GET /favicon.ico 200 in 33ms
+ GET /api/auth/session 200 in 25ms
+ ✓ Compiled /api/bookings in 389ms (758 modules)
+ GET /api/auth/session 200 in 575ms
+ GET /api/bookings 200 in 842ms
+ GET /api/bookings 200 in 814ms
+ GET /admin 200 in 544ms
+ GET /favicon.ico 200 in 15ms
+ GET /favicon.ico 200 in 31ms
+ GET /api/auth/session 200 in 34ms
+ GET /favicon.ico 200 in 17ms
+ GET /api/auth/session 200 in 19ms
+ GET /api/bookings 200 in 31ms
+ GET /api/auth/session 200 in 20ms
+ GET /api/bookings 200 in 33ms
+ GET /api/bookings 200 in 26ms
+ ✓ Compiled /api/bookings/[id] in 228ms (760 modules)
+ PUT /api/bookings/recurring-practise-2026-05-19 200 in 785ms
+ GET /api/bookings 200 in 76ms
+ ✓ Compiled in 124ms (294 modules)
+ GET /admin 200 in 77ms
+ GET / 200 in 43ms
+ GET /api/auth/session 200 in 34ms
+ ✓ Compiled /api/today-info in 212ms (482 modules)
+ ✓ Compiled (484 modules)
+ GET /api/auth/session 200 in 400ms
+ GET /api/availability 200 in 441ms
+ GET /api/availability 200 in 439ms
+ GET /api/today-info 200 in 518ms
+ GET /api/today-info 200 in 526ms
+ ✓ Compiled /api/booking-request in 260ms (767 modules)
+ POST /api/booking-request 200 in 331ms
+ GET /api/availability 200 in 81ms
+ ✓ Compiled in 135ms (294 modules)
+ GET / 200 in 69ms
+ ✓ Compiled /api/bookings/[id]/clean in 312ms (489 modules)
+ POST /api/bookings/1a9c1a33-8e1d-42d2-8062-9fed694484ef/clean 200 in 387ms
+ GET /api/availability 200 in 88ms
+ ✓ Compiled in 138ms (294 modules)
+ GET / 200 in 79ms
+ ✓ Compiled /api/auth/logout in 216ms (769 modules)
+ POST /api/auth/logout 200 in 261ms
+ GET /api/availability 200 in 29ms
+ ✓ Compiled in 744ms (737 modules)
+ GET / 200 in 176ms
+ ✓ Compiled in 436ms (737 modules)
+ ✓ Compiled in 239ms (294 modules)
+ GET / 200 in 459ms
+ GET / 200 in 42ms
+ ✓ Compiled in 460ms (737 modules)
+ GET / 200 in 98ms
+ ✓ Compiled in 375ms (737 modules)
+ GET / 200 in 182ms
+ ✓ Compiled in 287ms (737 modules)
+ GET / 200 in 112ms
+ GET / 500 in 362ms
+ ✓ Compiled /favicon.ico in 224ms (460 modules)
+ GET /favicon.ico 200 in 330ms
+ ✓ Compiled in 355ms (754 modules)
+ GET / 200 in 117ms
+ ✓ Compiled /favicon.ico in 207ms (466 modules)
+ ✓ Compiled (479 modules)
+ GET /favicon.ico 500 in 530ms
+ GET /api/auth/session 200 in 616ms
+ GET /api/availability 200 in 635ms
+ GET /api/today-info 200 in 704ms

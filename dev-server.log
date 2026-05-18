@@ -1,0 +1,10 @@
+
+> budeme-vytv-et-aplikaci-v-reactu@0.1.0 dev
+> next dev --port 3000
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.21.145:3000
+- Environments: .env.local
+✓ Ready in 524ms
+

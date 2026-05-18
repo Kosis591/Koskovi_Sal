@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f3ec;
+  --foreground: #1d2428;
+}
+
+html.dark,
+html[data-theme="dark"] {
+  --background: #111315;
+  --foreground: #f0f2f3;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-firma);
+  --font-mono: var(--font-firma);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-firma), Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: #43504f;
+}
+
+.field-input {
+  min-height: 2.75rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid #d8cec1;
+  background: #fcfaf6;
+  padding: 0.625rem 0.75rem;
+  color: #1d2428;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.field-input:focus {
+  border-color: #003758;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 55, 88, 0.14);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.mobile-view-select {
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .mobile-view-select {
+    display: none !important;
+  }
+}
+
+html.dark body,
+html[data-theme="dark"] body {
+  background: #111315;
+}
+
+html.dark .bg-white,
+html[data-theme="dark"] .bg-white,
+html.dark [class*="bg-[#fcfaf6]"],
+html[data-theme="dark"] [class*="bg-[#fcfaf6]"],
+html.dark [class*="bg-[#f6f1e8]"],
+html[data-theme="dark"] [class*="bg-[#f6f1e8]"] {
+  background-color: #1b1f22 !important;
+}
+
+html.dark [class*="bg-[#f7f3ec]"],
+html[data-theme="dark"] [class*="bg-[#f7f3ec]"] {
+  background-color: #111315 !important;
+}
+
+html.dark [class*="bg-[#f3f0ea]"],
+html[data-theme="dark"] [class*="bg-[#f3f0ea]"],
+html.dark [class*="bg-[#f1f3f5]"],
+html[data-theme="dark"] [class*="bg-[#f1f3f5]"] {
+  background-color: #24282c !important;
+}
+
+html.dark [class*="bg-[#eef8f2]"],
+html[data-theme="dark"] [class*="bg-[#eef8f2]"],
+html.dark [class*="bg-[#edf7ef]"],
+html[data-theme="dark"] [class*="bg-[#edf7ef]"],
+html.dark [class*="bg-[#f3fbf5]"],
+html[data-theme="dark"] [class*="bg-[#f3fbf5]"],
+html.dark [class*="bg-[#f1faf2]"],
+html[data-theme="dark"] [class*="bg-[#f1faf2]"] {
+  background-color: #1d2a23 !important;
+}
+
+html.dark [class*="bg-[#fff0eb]"],
+html[data-theme="dark"] [class*="bg-[#fff0eb]"],
+html.dark [class*="bg-[#fff8df]"],
+html[data-theme="dark"] [class*="bg-[#fff8df]"] {
+  background-color: #30211f !important;
+}
+
+html.dark [class*="bg-[#003758]"],
+html[data-theme="dark"] [class*="bg-[#003758]"] {
+  background-color: #004a72 !important;
+}
+
+html.dark [class*="border-[#ded6c9]"],
+html[data-theme="dark"] [class*="border-[#ded6c9]"],
+html.dark [class*="border-[#ece3d5]"],
+html[data-theme="dark"] [class*="border-[#ece3d5]"],
+html.dark [class*="border-[#e7dfd4]"],
+html[data-theme="dark"] [class*="border-[#e7dfd4]"],
+html.dark [class*="border-[#d8cec1]"],
+html[data-theme="dark"] [class*="border-[#d8cec1]"],
+html.dark [class*="border-[#d8eadf]"],
+html[data-theme="dark"] [class*="border-[#d8eadf]"],
+html.dark [class*="border-[#cbe3d1]"],
+html[data-theme="dark"] [class*="border-[#cbe3d1]"] {
+  border-color: #343a40 !important;
+}
+
+html.dark [class*="text-[#132935]"],
+html[data-theme="dark"] [class*="text-[#132935]"],
+html.dark [class*="text-[#1d2428]"],
+html[data-theme="dark"] [class*="text-[#1d2428]"],
+html.dark [class*="text-[#172126]"],
+html[data-theme="dark"] [class*="text-[#172126]"],
+html.dark [class*="text-black"],
+html[data-theme="dark"] [class*="text-black"] {
+  color: #f0f2f3 !important;
+}
+
+html.dark [class*="text-[#66706f]"],
+html[data-theme="dark"] [class*="text-[#66706f]"],
+html.dark [class*="text-[#53605f]"],
+html[data-theme="dark"] [class*="text-[#53605f]"],
+html.dark [class*="text-[#51615f]"],
+html[data-theme="dark"] [class*="text-[#51615f]"],
+html.dark [class*="text-[#9a9288]"],
+html[data-theme="dark"] [class*="text-[#9a9288]"],
+html.dark [class*="text-[#43504f]"],
+html[data-theme="dark"] [class*="text-[#43504f]"] {
+  color: #b7bdc2 !important;
+}
+
+html.dark [class*="text-[#003758]"],
+html[data-theme="dark"] [class*="text-[#003758]"] {
+  color: #91c4e6 !important;
+}
+
+html.dark [class*="text-[#246043]"],
+html[data-theme="dark"] [class*="text-[#246043]"],
+html.dark [class*="text-[#245d3f]"],
+html[data-theme="dark"] [class*="text-[#245d3f]"] {
+  color: #8fd7ac !important;
+}
+
+html.dark [class*="text-[#8c2f20]"],
+html[data-theme="dark"] [class*="text-[#8c2f20]"] {
+  color: #ffab98 !important;
+}
+
+html.dark .selected-period-head,
+html[data-theme="dark"] .selected-period-head {
+  border-color: #d89b2b !important;
+  background-color: #8a5a12 !important;
+  color: #fff8de !important;
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, 0.36),
+    inset 0 -5px 0 #f0c96b !important;
+}
+
+html.dark .selected-period-cell,
+html[data-theme="dark"] .selected-period-cell {
+  border-color: #b6d66a !important;
+  background-color: #26391f !important;
+  color: #edf8dc !important;
+  box-shadow:
+    0 9px 18px rgba(0, 0, 0, 0.32),
+    inset 0 3px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -3px 0 rgba(182, 214, 106, 0.34) !important;
+}
+
+html.dark .selected-period-closed,
+html[data-theme="dark"] .selected-period-closed {
+  border-color: #95876b !important;
+  background-color: #343128 !important;
+  color: #d8d0bf !important;
+  box-shadow:
+    0 9px 18px rgba(0, 0, 0, 0.28),
+    inset 0 3px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -3px 0 rgba(216, 155, 43, 0.2) !important;
+}
+
+html.dark .selected-period-booked,
+html[data-theme="dark"] .selected-period-booked {
+  border-color: #ff9c84 !important;
+  background-color: #4a2924 !important;
+  color: #ffd8cf !important;
+  box-shadow:
+    0 9px 18px rgba(0, 0, 0, 0.32),
+    inset 0 3px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -3px 0 rgba(255, 156, 132, 0.26) !important;
+}
+
+html.dark .time-marker-dot,
+html.dark .time-marker-line,
+html[data-theme="dark"] .time-marker-dot,
+html[data-theme="dark"] .time-marker-line {
+  background-color: #f0c96b !important;
+}
+
+html.dark button[class*="hover:bg-[#f6f1e8]"]:hover,
+html[data-theme="dark"] button[class*="hover:bg-[#f6f1e8]"]:hover {
+  background-color: #064869 !important;
+  color: #f2fbff !important;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.28),
+    inset 0 -3px 0 #8fd7ac !important;
+}
+
+html.dark .field-label,
+html[data-theme="dark"] .field-label {
+  color: #c7d5db;
+}
+
+html.dark .field-input,
+html[data-theme="dark"] .field-input {
+  border-color: #343a40;
+  background: #171a1d;
+  color: #f0f2f3;
+}
+
+html.dark .field-input:focus,
+html[data-theme="dark"] .field-input:focus {
+  border-color: #8fc8ec;
+  background: #1b1f22;
+  box-shadow: 0 0 0 3px rgba(143, 200, 236, 0.16);
+}
+
+html.dark img[src*="Koskovi_logo_znak.svg"],
+html[data-theme="dark"] img[src*="Koskovi_logo_znak.svg"],
+html.dark img[src*="Koskovi_logo_zaklad.svg"],
+html[data-theme="dark"] img[src*="Koskovi_logo_zaklad.svg"] {
+  filter: invert(1) brightness(1.7);
+}
