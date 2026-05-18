@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -7,7 +8,12 @@ import {
 
 const dataDir = path.join(process.cwd(), "data");
 const bookingsFile = path.join(dataDir, "bookings.json");
+const recurringCancellationsFile = path.join(dataDir, "recurring-cancellations.json");
 const temporaryBookingsFile = path.join(dataDir, "bookings.json.tmp");
+const temporaryRecurringCancellationsFile = path.join(
+  dataDir,
+  "recurring-cancellations.json.tmp",
+);
 const recurringHorizonDays = 28;
 const latBaseWeekMonday = "2026-05-18";
 let databaseQueue = Promise.resolve();
@@ -78,6 +84,10 @@ export async function deleteBooking(id: string) {
 
     if (nextBookings.length === bookings.length) {
       return false;
+    }
+
+    if (id.startsWith("recurring-")) {
+      await addRecurringCancellation(id);
     }
 
     await writeBookings(nextBookings);
@@ -186,6 +196,13 @@ function addRecurringBookings(bookings: Booking[]) {
   return nextBookings;
 }
 
+async function addRecurringCancellation(id: string) {
+  const cancellations = new Set(await readRecurringCancellations());
+
+  cancellations.add(id);
+  await writeRecurringCancellations([...cancellations]);
+}
+
 export async function refreshRecurringBookings() {
   return withDatabaseLock(async () => {
     const bookings = await readBookings();
@@ -200,6 +217,7 @@ export async function refreshRecurringBookings() {
 
 function createRecurringBookings() {
   const today = dateKeyToUtcDate(getTodayPragueDateKey());
+  const cancelledIds = getRecurringCancellationsSync();
   const bookings: Booking[] = [];
 
   for (let offset = 0; offset <= recurringHorizonDays; offset += 1) {
@@ -209,7 +227,7 @@ function createRecurringBookings() {
     const dateKey = formatUtcDateKey(date);
 
     if (day === 2) {
-      bookings.push({
+      const booking = {
         id: `recurring-practise-${dateKey}`,
         title: "Practise",
         organizer: "Koskovi",
@@ -218,14 +236,17 @@ function createRecurringBookings() {
         end: "19:30",
         status: "confirmed",
         note: "Pravidelna uterni akce",
-      });
+      } satisfies Booking;
+
+      if (!cancelledIds.has(booking.id)) {
+        bookings.push(booking);
+      }
     }
 
     if (day === 4) {
       const danceStyle = getAlternatingDanceStyle(dateKey);
 
-      bookings.push(
-        {
+      const pohybovka = {
           id: `recurring-pohybovka-${dateKey}`,
           title: "Pohybovka",
           organizer: "Koskovi",
@@ -234,8 +255,8 @@ function createRecurringBookings() {
           end: "18:00",
           status: "confirmed",
           note: "Pravidelna ctvrtecni akce",
-        },
-        {
+      } satisfies Booking;
+      const spolecna = {
           id: `recurring-spolecna-${dateKey}`,
           title: `Spolecna ${danceStyle}`,
           organizer: "Koskovi",
@@ -244,12 +265,54 @@ function createRecurringBookings() {
           end: "19:30",
           status: "confirmed",
           note: "LAT a STT se stridaji po tydnu",
-        },
-      );
+      } satisfies Booking;
+
+      if (!cancelledIds.has(pohybovka.id)) {
+        bookings.push(pohybovka);
+      }
+
+      if (!cancelledIds.has(spolecna.id)) {
+        bookings.push(spolecna);
+      }
     }
   }
 
   return bookings;
+}
+
+async function readRecurringCancellations() {
+  try {
+    return JSON.parse(
+      await readFile(recurringCancellationsFile, "utf-8"),
+    ) as string[];
+  } catch {
+    return [];
+  }
+}
+
+function getRecurringCancellationsSync() {
+  try {
+    return new Set(
+      JSON.parse(
+        readFileSync(recurringCancellationsFile, "utf-8"),
+      ) as string[],
+    );
+  } catch {
+    return new Set<string>();
+  }
+}
+
+async function writeRecurringCancellations(ids: string[]) {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(
+    temporaryRecurringCancellationsFile,
+    `${JSON.stringify([...new Set(ids)].sort(), null, 2)}\n`,
+    "utf-8",
+  );
+  await rename(
+    temporaryRecurringCancellationsFile,
+    recurringCancellationsFile,
+  );
 }
 
 function findBookingConflict(

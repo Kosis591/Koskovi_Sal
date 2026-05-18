@@ -15,6 +15,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Trash2,
   User,
 } from "lucide-react";
 import Image from "next/image";
@@ -92,6 +93,7 @@ type DayAvailabilitySegment =
       description: string;
       end: string;
       kind: "booked";
+      bookingId: string;
       start: string;
       status: Booking["status"];
       title: string;
@@ -135,6 +137,8 @@ export function BookingDashboard({
   const [submitMessage, setSubmitMessage] = useState("");
   const [cleanupMessage, setCleanupMessage] = useState("");
   const [cleaningBookingId, setCleaningBookingId] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [deletingBookingId, setDeletingBookingId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarBookings, setCalendarBookings] =
     useState<Booking[]>(initialBookings);
@@ -371,6 +375,41 @@ export function BookingDashboard({
       await syncCalendar();
     } finally {
       setCleaningBookingId("");
+    }
+  }
+
+  async function handleDeleteBooking(bookingId: string, title: string) {
+    const isRecurringBooking = isRecurringBookingId(bookingId);
+    const confirmMessage = isRecurringBooking
+      ? `Opravdu zrusit jen tento termin "${title}"? Pravidelne treninky v dalsich tydnech zustanou.`
+      : `Opravdu smazat akci "${title}"?`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setDeleteMessage("");
+    setDeletingBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { message?: string };
+        setDeleteMessage(data.message ?? "Akci se nepodarilo smazat.");
+        return;
+      }
+
+      setDeleteMessage(
+        isRecurringBooking
+          ? "Tento termin pravidelne akce byl zrusen."
+          : "Akce byla smazana.",
+      );
+      await syncCalendar();
+    } finally {
+      setDeletingBookingId("");
     }
   }
 
@@ -1105,6 +1144,24 @@ export function BookingDashboard({
                           : "Uklidil jsem sal"}
                       </button>
                     ) : null}
+                    {isAuthenticated &&
+                    segment.kind === "booked" ? (
+                      <button
+                        className="mt-2 inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[#d9a093] bg-[#fff0eb] px-3 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#ffe3da] disabled:cursor-not-allowed disabled:opacity-70"
+                        disabled={deletingBookingId === segment.bookingId}
+                        onClick={() =>
+                          handleDeleteBooking(segment.bookingId, segment.title)
+                        }
+                        type="button"
+                      >
+                        <Trash2 size={13} />
+                        {deletingBookingId === segment.bookingId
+                          ? "Mazu..."
+                          : isRecurringBookingId(segment.bookingId)
+                            ? "Zrusit tento termin"
+                            : "Smazat akci"}
+                      </button>
+                    ) : null}
                   </span>
                 </div>
               ))}
@@ -1112,7 +1169,13 @@ export function BookingDashboard({
 
             {cleanupMessage ? (
               <p className="mt-3 rounded-md border border-[#dfc36b] bg-[#fff6d8] px-3 py-2 text-xs font-semibold text-[#5e4300]">
-                {cleanupMessage}
+              {cleanupMessage}
+            </p>
+          ) : null}
+
+            {deleteMessage ? (
+              <p className="mt-3 rounded-md border border-[#edd3cc] bg-[#fff0eb] px-3 py-2 text-xs font-semibold text-[#8c2f20]">
+                {deleteMessage}
               </p>
             ) : null}
 
@@ -1478,6 +1541,10 @@ function isCountableEvent(booking: Booking) {
   return true;
 }
 
+function isRecurringBookingId(bookingId: string) {
+  return bookingId.startsWith("recurring-");
+}
+
 function getDayAvailabilitySegments(
   dateKey: string,
   bookingList: Booking[],
@@ -1510,6 +1577,7 @@ function getDayAvailabilitySegments(
       !booking ? getPendingCleanupBooking(bookingList, dateKey, slot) : undefined;
     const nextSegment: DayAvailabilitySegment = booking
       ? {
+          bookingId: booking.id,
           description: booking.organizer,
           end: slotEnd,
           kind: "booked",
@@ -1579,6 +1647,7 @@ function canMergeSegments(
     return (
       previousSegment.title === nextSegment.title &&
       previousSegment.description === nextSegment.description &&
+      previousSegment.bookingId === nextSegment.bookingId &&
       previousSegment.status === nextSegment.status
     );
   }

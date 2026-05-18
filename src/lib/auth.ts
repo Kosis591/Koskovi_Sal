@@ -23,16 +23,16 @@ function getAdminCredentials(): AdminCredential[] {
     },
     {
       username: "JB",
-      password: "Nellinka24",
+      passwordHash: process.env.ADMIN_JB_PASSWORD_HASH,
     },
     {
       username: "sarka",
-      password: "barunka5",
+      passwordHash: process.env.ADMIN_SARKA_PASSWORD_HASH,
     },
     {
       username: "Pepe",
-      password: "Petruska04",
-    }
+      passwordHash: process.env.ADMIN_PEPE_PASSWORD_HASH,
+    },
   ];
 }
 
