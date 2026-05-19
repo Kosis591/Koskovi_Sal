@@ -9,11 +9,8 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1769ms
+ ✓ Ready in 1835ms
  ○ Compiling / ...
  ✓ Compiled / in 3.1s (755 modules)
- GET / 200 in 4353ms
- ○ Compiling /admin ...
- ✓ Compiled /admin in 910ms (760 modules)
- GET /admin 200 in 1071ms
- GET / 200 in 928ms
+ GET / 200 in 4377ms
+ GET / 200 in 896ms
