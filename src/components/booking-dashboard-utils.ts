@@ -362,11 +362,14 @@ export function scrollCurrentTimeIntoView(container: HTMLDivElement | null) {
   const containerRect = container.getBoundingClientRect();
   const currentSlotRect = currentSlot.getBoundingClientRect();
   const headerOffset = 84;
+  const sideOffset = 180;
   const nextScrollTop =
     container.scrollTop + currentSlotRect.top - containerRect.top - headerOffset;
+  const nextScrollLeft =
+    container.scrollLeft + currentSlotRect.left - containerRect.left - sideOffset;
 
   container.scrollTo({
-    left: 0,
+    left: Math.max(0, nextScrollLeft),
     top: Math.max(0, nextScrollTop),
     behavior: "smooth",
   });

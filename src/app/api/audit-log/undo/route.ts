@@ -4,6 +4,7 @@ import { appendAuditLog, readAuditLog, type AuditLogEntry } from "@/lib/audit-lo
 import { getAdminRequestUsername, isAdminRequest } from "@/lib/auth";
 import {
   deleteBooking,
+  reinstateRecurringBooking,
   restoreBookingSnapshot,
 } from "@/lib/bookings-db";
 import type { Booking } from "@/lib/schedule";
@@ -22,15 +23,8 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
   const actor = getAdminRequestUsername(cookieStore);
 
-  if (!isAdminRequest(cookieStore)) {
+  if (!isAdminRequest(cookieStore) || !actor) {
     return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
-  }
-
-  if (actor !== "kosis") {
-    return NextResponse.json(
-      { message: "Undo je dostupné jen pro uživatele kosis." },
-      { status: 403 },
-    );
   }
 
   const payload = (await request.json()) as UndoPayload;
@@ -50,6 +44,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { message: "Záznam logu už není dostupný." },
       { status: 404 },
+    );
+  }
+
+  if (!canActorUndoEntry(actor, entry)) {
+    return NextResponse.json(
+      { message: "Tuto operaci nemůžeš vrátit." },
+      { status: 403 },
     );
   }
 
@@ -100,6 +101,26 @@ async function undoAuditEntry(entry: AuditLogEntry) {
       return { message: "Tento starší záznam nejde vrátit.", status: 400 };
     }
 
+    if (isPastBookingDate(details.booking)) {
+      return {
+        message: "Akci už nejde vrátit, protože termín už proběhl.",
+        status: 409,
+      };
+    }
+
+    if (details.booking.id.startsWith("recurring-")) {
+      const result = await reinstateRecurringBooking(details.booking.id);
+
+      if (!result.booking) {
+        return {
+          message: "Pravidelný termín nejde vrátit.",
+          status: 404,
+        };
+      }
+
+      return { status: 200, title: result.booking.title };
+    }
+
     const result = await restoreBookingSnapshot(details.booking);
 
     if (result.conflict) {
@@ -130,4 +151,25 @@ async function undoAuditEntry(entry: AuditLogEntry) {
   }
 
   return { message: "Tuto operaci nejde vrátit.", status: 400 };
+}
+
+function canActorUndoEntry(actor: string, entry: AuditLogEntry) {
+  if (actor === "kosis") {
+    return true;
+  }
+
+  return entry.action === "booking.delete" && entry.actor === actor;
+}
+
+function isPastBookingDate(booking: Booking) {
+  return booking.date < getTodayPragueDateKey();
+}
+
+function getTodayPragueDateKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Prague",
+    year: "numeric",
+  }).format(new Date());
 }

@@ -174,6 +174,23 @@ export async function restoreBookingSnapshot(snapshot: Booking) {
   });
 }
 
+export async function reinstateRecurringBooking(id: string) {
+  return withDatabaseLock(async () => {
+    if (!id.startsWith("recurring-")) {
+      return { booking: null };
+    }
+
+    await removeRecurringCancellation(id);
+
+    const bookings = await readBookings();
+    await writeBookings(bookings);
+
+    return {
+      booking: bookings.find((booking) => booking.id === id) ?? null,
+    };
+  });
+}
+
 export async function updateBookingTrainer(id: string, trainer: string) {
   return withDatabaseLock(async () => {
     const normalizedTrainer = trainer.trim();
@@ -336,6 +353,13 @@ async function addRecurringCancellation(id: string) {
   await writeRecurringCancellations([...cancellations]);
 }
 
+async function removeRecurringCancellation(id: string) {
+  const cancellations = new Set(await readRecurringCancellations());
+
+  cancellations.delete(id);
+  await writeRecurringCancellations([...cancellations]);
+}
+
 export async function refreshRecurringBookings() {
   return withDatabaseLock(async () => {
     const bookings = await readBookings();
@@ -456,6 +480,7 @@ function buildRecurringBooking(
   return {
     ...booking,
     note: trainer ? `${booking.note}\nTrenér: ${trainer}` : booking.note,
+    recurringKey: key,
     trainer: trainer || undefined,
   };
 }
@@ -728,7 +753,21 @@ function removePastBookings(bookings: Booking[]) {
 }
 
 function serializeBookings(bookings: Booking[]) {
-  return `${JSON.stringify(normalizeBookings(bookings), null, 2)}\n`;
+  return `${JSON.stringify(normalizeStoredBookings(bookings), null, 2)}\n`;
+}
+
+function normalizeStoredBookings(bookings: Booking[]) {
+  const uniqueBookings = new Map<string, Booking>();
+
+  for (const booking of removePastBookings(bookings)) {
+    if (isRecurringBooking(booking)) {
+      continue;
+    }
+
+    uniqueBookings.set(booking.id, booking);
+  }
+
+  return sortBookings([...uniqueBookings.values()]);
 }
 
 function getTodayPragueDateKey() {

@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "clean": "node scripts/clean-next.mjs",
+    "dev": "node scripts/clean-next.mjs && next dev",
+    "build": "node scripts/clean-next.mjs && next build",
     "hash-password": "node scripts/hash-password.mjs",
     "start": "next start",
     "lint": "eslint"

@@ -103,7 +103,7 @@ export function AdminBookings() {
 
     const data = (await response.json()) as { bookings: Booking[] };
     setBookings(data.bookings);
-    if (sessionUsername === "kosis") {
+    if (sessionUsername) {
       await loadAuditLog();
     }
   }, [loadAuditLog, sessionUsername]);
@@ -142,7 +142,7 @@ export function AdminBookings() {
           setBookings(data.bookings);
         }
 
-        if (session.username === "kosis") {
+        if (session.username) {
           await loadAuditLog();
         }
 
@@ -175,7 +175,7 @@ export function AdminBookings() {
     setSessionUsername(session.username ?? null);
     await loadBookings();
     await loadRecurringTrainers();
-    if (session.username === "kosis") {
+    if (session.username) {
       await loadAuditLog();
     }
   }
@@ -704,13 +704,16 @@ export function AdminBookings() {
               </div>
             </div>
 
-            {sessionUsername === "kosis" ? (
+            {sessionUsername ? (
               <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:col-span-2">
                 <div className="border-b border-[#ded6c9] px-5 py-4">
-                  <h2 className="text-xl font-semibold">Log operací</h2>
+                  <h2 className="text-xl font-semibold">
+                    {sessionUsername === "kosis" ? "Log operací" : "Moje smazané akce"}
+                  </h2>
                   <p className="mt-1 text-sm text-[#66706f]">
-                    Posledních 100 operací. Soubor logu se automaticky drží pod
-                    100 MB.
+                    {sessionUsername === "kosis"
+                      ? "Posledních 100 operací. Soubor logu se automaticky drží pod 100 MB."
+                      : "Tady můžeš vrátit akci, kterou jsi smazal omylem. Jakmile termín proběhne, vrácení se schová."}
                   </p>
                 </div>
                 <div className="divide-y divide-[#ece3d5]">
@@ -729,7 +732,7 @@ export function AdminBookings() {
                           {entry.details?.title ? `: ${entry.details.title}` : ""}
                           {entry.details?.date ? ` (${entry.details.date})` : ""}
                         </span>
-                        {canUndoAuditEntry(entry) ? (
+                        {canUndoAuditEntry(entry, sessionUsername) ? (
                           <button
                             className="inline-flex h-9 items-center justify-center rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8] disabled:cursor-not-allowed disabled:opacity-60"
                             disabled={undoingTimestamp === entry.timestamp}
@@ -773,13 +776,23 @@ function formatAuditAction(action: string) {
   return labels[action] ?? action;
 }
 
-function canUndoAuditEntry(entry: AuditLogEntry) {
+function canUndoAuditEntry(entry: AuditLogEntry, sessionUsername: string | null) {
+  if (
+    sessionUsername !== "kosis" &&
+    (entry.action !== "booking.delete" || entry.actor !== sessionUsername)
+  ) {
+    return false;
+  }
+
   if (entry.action === "booking.create") {
     return Boolean(entry.bookingId);
   }
 
   if (entry.action === "booking.delete") {
-    return Boolean(entry.details?.booking);
+    return Boolean(
+      entry.details?.booking &&
+        entry.details.booking.date >= getTodayPragueDateKey(),
+    );
   }
 
   if (entry.action === "booking.update" || entry.action === "booking.clean") {
@@ -787,4 +800,13 @@ function canUndoAuditEntry(entry: AuditLogEntry) {
   }
 
   return false;
+}
+
+function getTodayPragueDateKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Prague",
+    year: "numeric",
+  }).format(new Date());
 }

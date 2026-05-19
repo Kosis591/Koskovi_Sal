@@ -7,13 +7,19 @@ export async function GET() {
   const cookieStore = await cookies();
   const username = getAdminRequestUsername(cookieStore);
 
-  if (!isAdminRequest(cookieStore)) {
+  if (!isAdminRequest(cookieStore) || !username) {
     return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
   }
 
+  const entries = await readAuditLog(100);
+
   if (username !== "kosis") {
-    return NextResponse.json({ message: "Nedostatečná oprávnění." }, { status: 403 });
+    return NextResponse.json({
+      entries: entries.filter(
+        (entry) => entry.actor === username && entry.action === "booking.delete",
+      ),
+    });
   }
 
-  return NextResponse.json({ entries: await readAuditLog(100) });
+  return NextResponse.json({ entries });
 }

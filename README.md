@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Koskovi Sal
 
-## Getting Started
+Next.js aplikace pro dostupnost a rezervace tanecniho salu.
 
-First, run the development server:
+## Lokalni vyvoj
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Stranka bezi na [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Prikaz `npm run dev` pred startem automaticky smaze slozku `.next`, aby se nemichala vyvojova cache s produkcnim buildem.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Produkcni build
 
-## Learn More
+```bash
+npm run build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+Build si take nejprve vycisti `.next`. Prikaz `npm run start` uz `.next` nemaze, protoze ji v produkci potrebuje.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Rucni vycisteni cache
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Kdyz se Next.js zasekne na chybe typu chybejici `routes-manifest.json`, `pages-manifest.json` nebo podivne cache po buildu, spust:
 
-## Deploy on Vercel
+```bash
+npm run clean
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Skript maze jen slozku `.next` v koreni projektu.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Hashovani hesel
+
+```bash
+npm run hash-password -- "tvoje-heslo"
+```
+
+Vystup vloz do odpovidajici promenne v `.env.local`.

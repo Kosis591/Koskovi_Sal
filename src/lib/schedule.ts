@@ -14,6 +14,7 @@ export type Booking = {
   end: string;
   status: BookingStatus;
   note?: string;
+  recurringKey?: string;
   trainer?: string;
   updatedAt?: string;
   updatedBy?: string;
