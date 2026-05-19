@@ -14,6 +14,7 @@ export type Booking = {
   end: string;
   status: BookingStatus;
   note?: string;
+  trainer?: string;
   updatedAt?: string;
   updatedBy?: string;
 };
@@ -45,6 +46,8 @@ export const hallSettings = {
     { day: 0, label: "Nedele", start: "14:00", end: "21:00" },
   ],
 };
+
+export const trainerOptions = ["Barča", "Jirka", "Marek", "Šárka", "Kamča", "Externí"];
 
 export const bookings: Booking[] = [
   {

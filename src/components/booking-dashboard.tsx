@@ -23,7 +23,12 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { SiteShell } from "@/components/site-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { loginAdmin, logoutAdmin } from "@/lib/admin-auth-client";
+import type { RecurringCancellationNotice } from "@/lib/bookings-db";
+import {
+  getAdminSession,
+  loginAdmin,
+  logoutAdmin,
+} from "@/lib/admin-auth-client";
 import {
   createTimeSlots,
   getOpeningHoursForDate,
@@ -35,10 +40,10 @@ import {
   hallSettings,
   isSlotBooked,
   isSlotOpen,
+  trainerOptions,
   type Booking,
   type BookingRequest,
 } from "@/lib/schedule";
-import type { TodayInfo } from "@/lib/today-info";
 
 const dayFormatter = new Intl.DateTimeFormat("cs-CZ", {
   weekday: "short",
@@ -55,6 +60,11 @@ const longDateFormatter = new Intl.DateTimeFormat("cs-CZ", {
 const monthLabelFormatter = new Intl.DateTimeFormat("cs-CZ", {
   month: "long",
   year: "numeric",
+});
+
+const cancellationDateFormatter = new Intl.DateTimeFormat("cs-CZ", {
+  day: "numeric",
+  month: "numeric",
 });
 
 const statusStyles = {
@@ -78,8 +88,6 @@ const slotFillStyles = {
 
 const partialAvailableCellStyle = "bg-white";
 const selectedPartialAvailableCellStyle = "selected-period-cell bg-[#eef7fb]";
-
-const trainerOptions = ["Barča", "Jirka", "Marek", "Šárka", "Kamča", "Externí"];
 
 const initialRequest: BookingRequest = {
   name: "",
@@ -111,6 +119,7 @@ type DayAvailabilitySegment =
       start: string;
       status: Booking["status"];
       title: string;
+      trainer?: string;
     };
 
 type SlotState = {
@@ -121,31 +130,34 @@ type SlotState = {
 
 type BookingDashboardProps = {
   initialBookings: Booking[];
+  initialDate: string;
+  initialRecurringCancellations: RecurringCancellationNotice[];
   initialSession: {
     authenticated: boolean;
     username: string | null;
   };
-  initialTodayInfo: TodayInfo;
 };
 
 export function BookingDashboard({
   initialBookings,
+  initialDate,
+  initialRecurringCancellations,
   initialSession,
-  initialTodayInfo,
 }: BookingDashboardProps) {
-  const [selectedDate, setSelectedDate] = useState(initialTodayInfo.date);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const [viewMode, setViewMode] = useState<"today" | "week" | "month">(
     "week",
   );
   const [request, setRequest] = useState({
     ...initialRequest,
-    date: initialTodayInfo.date,
+    date: initialDate,
   });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(
     initialSession.authenticated,
   );
+  const [sessionUsername, setSessionUsername] = useState(initialSession.username);
   const isCheckingSession = false;
   const [authError, setAuthError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
@@ -153,12 +165,16 @@ export function BookingDashboard({
   const [cleaningBookingId, setCleaningBookingId] = useState("");
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deletingBookingId, setDeletingBookingId] = useState("");
+  const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
+  const [trainerMessage, setTrainerMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarBookings, setCalendarBookings] =
     useState<Booking[]>(initialBookings);
+  const [recurringCancellations, setRecurringCancellations] = useState(
+    initialRecurringCancellations,
+  );
   const [isSyncing, setIsSyncing] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
-  const todayInfo = initialTodayInfo;
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
 
   const timeSlots = useMemo(() => createTimeSlots(), []);
@@ -166,8 +182,8 @@ export function BookingDashboard({
   const currentTimeMinutes = now
     ? now.getHours() * 60 + now.getMinutes()
     : null;
-  const todayDate = now ?? new Date(`${initialTodayInfo.date}T12:00:00`);
-  const todayDateKey = currentDateKey || initialTodayInfo.date;
+  const todayDate = now ?? new Date(`${initialDate}T12:00:00`);
+  const todayDateKey = currentDateKey || initialDate;
   const days = useMemo(
     () => getWeekDays(getWeekStartDate(todayDateKey)),
     [todayDateKey],
@@ -309,9 +325,11 @@ export function BookingDashboard({
       const data = (await response.json()) as {
         source: string;
         bookings: Booking[];
+        recurringCancellations?: RecurringCancellationNotice[];
       };
 
       setCalendarBookings(data.bookings);
+      setRecurringCancellations(data.recurringCancellations ?? []);
     } finally {
       setIsSyncing(false);
     }
@@ -339,9 +357,12 @@ export function BookingDashboard({
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAuthError("");
+    const submittedUsername = username.trim();
 
     try {
       await loginAdmin(username, password);
+      const session = await getAdminSession();
+      setSessionUsername(session.username ?? submittedUsername);
     } catch (error) {
       setAuthError(
         error instanceof Error ? error.message : "Přihlášení se nepodařilo.",
@@ -357,6 +378,7 @@ export function BookingDashboard({
   async function handleLogout() {
     await logoutAdmin();
     setIsAuthenticated(false);
+    setSessionUsername(null);
     setSubmitMessage("");
   }
 
@@ -449,9 +471,42 @@ export function BookingDashboard({
     }
   }
 
+  async function handleUpdateBookingTrainer(bookingId: string, trainer: string) {
+    setTrainerMessage("");
+    setSavingTrainerBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/trainer`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ trainer }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { message?: string };
+        setTrainerMessage(data.message ?? "Trenéra se nepodařilo uložit.");
+        return;
+      }
+
+      setTrainerMessage(
+        trainer ? "Trenér pro tento termín je uložený." : "Trenér byl odebraný.",
+      );
+      await syncCalendar();
+    } finally {
+      setSavingTrainerBookingId("");
+    }
+  }
+
   return (
     <SiteShell
-      contentClassName="grid gap-6 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 xl:grid-cols-[minmax(0,1fr)_400px]"
+      maxWidthClassName="max-w-[1840px]"
+      contentClassName={`grid gap-6 px-5 py-6 lg:grid-cols-[minmax(1120px,1fr)_360px] lg:pl-8 lg:pr-6 xl:grid-cols-[minmax(1180px,1fr)_360px] xl:pl-12 xl:pr-8 ${
+        isAuthenticated
+          ? "2xl:grid-cols-[minmax(1180px,1fr)_minmax(680px,760px)] 2xl:pl-16"
+          : ""
+      }`}
       description={
         <>
           Přehled dostupnosti pro lekce, workshopy a společenské akce Koškovi.
@@ -474,6 +529,9 @@ export function BookingDashboard({
           label: group.days,
           value: group.hours,
         })),
+        sideContent: (
+          <RecurringCancellationPanel cancellations={recurringCancellations} />
+        ),
         subtitle: "Pravidelný provoz sálu",
         title: "Otevírací doba",
       }}
@@ -486,29 +544,15 @@ export function BookingDashboard({
           label: "Dnes otevřeno",
           value: todaysOpeningHours,
         },
-        {
-          label: "Tento týden",
-          value: formatEventCount(weeklyEventCount),
-        },
+        ...(isAuthenticated
+          ? [
+              {
+                label: "Tento týden",
+                value: formatEventCount(weeklyEventCount),
+              },
+            ]
+          : []),
       ]}
-      notice={
-        todayInfo ? (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="font-semibold text-white">
-              Dnes je {todayInfo.dateLabel}
-            </span>
-            <span>{todayInfo.weekLabel}</span>
-            {todayInfo.nameDay ? (
-              <span>Svátek má {todayInfo.nameDay}</span>
-            ) : null}
-            {todayInfo.isHoliday && todayInfo.holidayName ? (
-              <span className="rounded-full border border-[#f0c96b]/50 bg-[#f0c96b]/15 px-2.5 py-1 font-semibold text-[#fff8de]">
-                {todayInfo.holidayName}
-              </span>
-            ) : null}
-          </div>
-        ) : null
-      }
       title="Dostupnost tanečního sálu"
     >
         <div className="min-w-0 space-y-6">
@@ -605,7 +649,7 @@ export function BookingDashboard({
           </div>
           {isAuthenticated ? (
             <div className="rounded-md border border-[#ded6c9] bg-white px-3 py-2 text-sm text-[#66706f]">
-                Jste přihlášen jako správce
+                Jsi přihlášen jako: {sessionUsername ?? "uživatel"}
               <Link
                 className="ml-3 inline-flex h-9 items-center justify-center rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76]"
                 href="/admin"
@@ -759,13 +803,13 @@ export function BookingDashboard({
               </div>
             </div>
           ) : viewMode === "week" ? (
-            <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
+            <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:min-w-[1120px] xl:min-w-[1180px]">
               <div
-                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-auto overscroll-contain"
+                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-y-auto overflow-x-hidden overscroll-contain"
                 ref={calendarScrollerRef}
               >
-                <div className="min-w-[980px] xl:min-w-0">
-                  <div className="sticky top-0 z-20 grid grid-cols-[80px_repeat(7,minmax(112px,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[84px_repeat(7,minmax(128px,1fr))]">
+                <div className="min-w-full">
+                  <div className="sticky top-0 z-20 grid grid-cols-[88px_repeat(7,minmax(144px,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[92px_repeat(7,minmax(152px,1fr))]">
                     <div className="sticky left-0 z-30 bg-[#f6f1e8] px-3 py-3 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
                       Cas
                     </div>
@@ -803,7 +847,7 @@ export function BookingDashboard({
 
                   {timeSlots.map((time) => (
                     <div
-                      className="grid grid-cols-[80px_repeat(7,minmax(112px,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[84px_repeat(7,minmax(128px,1fr))]"
+                      className="grid grid-cols-[88px_repeat(7,minmax(144px,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[92px_repeat(7,minmax(152px,1fr))]"
                       key={time}
                     >
                       <div className="sticky left-0 z-10 bg-[#fcfaf6] px-3 py-3 text-sm font-medium text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.06)]">
@@ -1100,8 +1144,12 @@ export function BookingDashboard({
           </div>
         </div>
 
-        <aside className="space-y-6">
-          <div className="rounded-lg border border-[#ded6c9] bg-white p-5">
+        <aside className={`flex flex-col gap-6 ${
+          isAuthenticated ? "2xl:grid 2xl:grid-cols-2 2xl:items-start" : ""
+        }`}>
+          <div className={`rounded-lg border border-[#ded6c9] bg-white p-5 ${
+            isAuthenticated ? "lg:order-2" : "lg:order-1"
+          }`}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-medium text-[#66706f]">
@@ -1135,7 +1183,7 @@ export function BookingDashboard({
             <div className="mt-5 space-y-2">
               {selectedDaySegments.map((segment) => (
                 <div
-                  className={`grid grid-cols-[92px_1fr] items-center gap-3 rounded-md border px-3 py-2 text-sm ${
+                  className={`grid grid-cols-[84px_minmax(0,1fr)] items-center gap-2 rounded-md border px-3 py-2 text-sm ${
                     segment.kind === "free"
                       ? "border-[#d8eadf] bg-[#f3fbf5] text-[#246043]"
                       : segment.kind === "closed"
@@ -1144,7 +1192,7 @@ export function BookingDashboard({
                   }`}
                   key={`${segment.kind}-${segment.start}-${segment.end}-${segment.title}`}
                 >
-                  <span className="inline-flex items-center gap-1.5 font-semibold">
+                  <span className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap font-semibold text-xs sm:text-sm">
                     <Clock3 size={14} />
                     {segment.start}-{segment.end}
                   </span>
@@ -1156,6 +1204,29 @@ export function BookingDashboard({
                       <span className="mt-0.5 block truncate text-xs opacity-80">
                         {segment.description}
                       </span>
+                    ) : null}
+                    {isAuthenticated && segment.kind === "booked" ? (
+                      <label className="mt-2 block text-xs font-semibold">
+                        Trenér
+                        <select
+                          className="field-input mt-1 min-h-8 w-full py-1 text-xs"
+                          disabled={savingTrainerBookingId === segment.bookingId}
+                          onChange={(event) =>
+                            handleUpdateBookingTrainer(
+                              segment.bookingId,
+                              event.target.value,
+                            )
+                          }
+                          value={segment.trainer ?? ""}
+                        >
+                          <option value="">Bez trenéra</option>
+                          {trainerOptions.map((trainer) => (
+                            <option key={trainer} value={trainer}>
+                              {trainer}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     ) : null}
                     {segment.kind === "cleanup" && segment.cleanupBookingId ? (
                       <button
@@ -1177,7 +1248,7 @@ export function BookingDashboard({
                     {isAuthenticated &&
                     segment.kind === "booked" ? (
                       <button
-                        className="mt-2 inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[#d9a093] bg-[#fff0eb] px-3 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#ffe3da] disabled:cursor-not-allowed disabled:opacity-70"
+                        className="mt-2 inline-flex min-h-8 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-[#d9a093] bg-[#fff0eb] px-2.5 py-1.5 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#ffe3da] disabled:cursor-not-allowed disabled:opacity-70"
                         disabled={deletingBookingId === segment.bookingId}
                         onClick={() =>
                           handleDeleteBooking(segment.bookingId, segment.title)
@@ -1206,6 +1277,12 @@ export function BookingDashboard({
             {deleteMessage ? (
               <p className="mt-3 rounded-md border border-[#edd3cc] bg-[#fff0eb] px-3 py-2 text-xs font-semibold text-[#8c2f20]">
                 {deleteMessage}
+              </p>
+            ) : null}
+
+            {trainerMessage ? (
+              <p className="mt-3 rounded-md border border-[#cbe3d1] bg-[#f1faf2] px-3 py-2 text-xs font-semibold text-[#245d3f]">
+                {trainerMessage}
               </p>
             ) : null}
 
@@ -1246,12 +1323,14 @@ export function BookingDashboard({
             ) : null}
           </div>
 
-          <div className="rounded-lg border border-[#ded6c9] bg-white p-5">
+          <div className={`rounded-lg border border-[#ded6c9] bg-white p-5 ${
+            isAuthenticated ? "lg:order-1" : "lg:order-2"
+          }`}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold">Rezervace sálu</h2>
                 <p className="mt-1 text-sm leading-6 text-[#66706f]">
-                  Vkládání rezervací je dostupné jen po přihlášení správce.
+                  Vkládání rezervací je dostupné jen po přihlášení oprávněného uživatele.
                 </p>
               </div>
               <LockKeyhole className="text-[#003758]" size={24} />
@@ -1266,7 +1345,7 @@ export function BookingDashboard({
                 <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-[#d8eadf] bg-[#f3fbf5] p-3 text-sm text-[#245d3f]">
                   <span className="inline-flex items-center gap-2">
                     <ShieldCheck size={17} />
-                    řihlášeno jako správce
+                    Jsi přihlášen jako: {sessionUsername ?? "uživatel"}
                   </span>
                   <button
                     className="inline-flex items-center gap-1.5 rounded-md border border-[#c9ded0] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#245d3f] transition hover:bg-[#eef8f2]"
@@ -1441,17 +1520,17 @@ export function BookingDashboard({
             ) : (
               <form className="mt-5 space-y-3" onSubmit={handleLogin}>
                 <label className="field-label">
-                  Jméno správce
+                  Jméno uživatele
                   <input
                     className="field-input mt-1"
                     onChange={(event) => setUsername(event.target.value)}
-                    placeholder="Jméno správce"
+                    placeholder="Jméno uživatele"
                     required
                     value={username}
                   />
                 </label>
                 <label className="field-label">
-                  Heslo správce
+                  Heslo
                   <input
                     className="field-input mt-1"
                     onChange={(event) => setPassword(event.target.value)}
@@ -1481,6 +1560,43 @@ export function BookingDashboard({
           </div>
         </aside>
     </SiteShell>
+  );
+}
+
+function RecurringCancellationPanel({
+  cancellations,
+}: {
+  cancellations: RecurringCancellationNotice[];
+}) {
+  if (cancellations.length === 0) {
+    return (
+      <div className="flex h-full min-h-24 items-center rounded-md border border-white/10 bg-white/10 px-4 py-3 text-sm text-[#d7e6ed]">
+        Žádný pravidelný trénink není aktuálně zrušený.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid h-full gap-2">
+      {cancellations.map((cancellation) => (
+        <div
+          className="rounded-md border border-[#ffb4a8] bg-[#7f1d1d] px-4 py-3 text-sm text-white shadow-[0_12px_26px_rgba(0,0,0,0.18)]"
+          key={cancellation.id}
+        >
+          <p className="flex items-center gap-2 font-semibold">
+            <AlertCircle size={17} />
+            Zrušený pravidelný trénink
+          </p>
+          <p className="mt-1 text-[#ffe0dc]">
+            {cancellation.title} v datu{" "}
+            {cancellationDateFormatter.format(
+              new Date(`${cancellation.date}T12:00:00`),
+            )}{" "}
+            od {cancellation.start} do {cancellation.end}.
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1641,12 +1757,13 @@ function getDayAvailabilitySegments(
     const nextSegment: DayAvailabilitySegment = booking
       ? {
           bookingId: booking.id,
-          description: booking.organizer,
+          description: formatBookingDescription(booking),
           end: minTime(booking.end, slotEnd),
           kind: "booked",
           start: maxTime(booking.start, slot),
           status: booking.status,
           title: booking.title,
+          trainer: booking.trainer,
         }
       : cleanupBooking
         ? {
@@ -1696,6 +1813,12 @@ function getSegmentStyle(segment: DayAvailabilitySegment) {
   }
 
   return statusStyles[segment.status];
+}
+
+function formatBookingDescription(booking: Booking) {
+  return booking.trainer
+    ? `${booking.organizer} · Trenér: ${booking.trainer}`
+    : booking.organizer;
 }
 
 function getBookingCellStyle(
@@ -1888,14 +2011,11 @@ function scrollCurrentTimeIntoView(container: HTMLDivElement | null) {
   const containerRect = container.getBoundingClientRect();
   const currentSlotRect = currentSlot.getBoundingClientRect();
   const headerOffset = 84;
-  const leftPreview = 180;
-  const nextScrollLeft =
-    container.scrollLeft + currentSlotRect.left - containerRect.left - leftPreview;
   const nextScrollTop =
     container.scrollTop + currentSlotRect.top - containerRect.top - headerOffset;
 
   container.scrollTo({
-    left: Math.max(0, nextScrollLeft),
+    left: 0,
     top: Math.max(0, nextScrollTop),
     behavior: "smooth",
   });

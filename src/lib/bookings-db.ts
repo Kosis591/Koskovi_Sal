@@ -9,10 +9,20 @@ import {
 const dataDir = path.join(process.cwd(), "data");
 const bookingsFile = path.join(dataDir, "bookings.json");
 const recurringCancellationsFile = path.join(dataDir, "recurring-cancellations.json");
+const recurringOverridesFile = path.join(dataDir, "recurring-overrides.json");
+const recurringTrainersFile = path.join(dataDir, "recurring-trainers.json");
 const temporaryBookingsFile = path.join(dataDir, "bookings.json.tmp");
 const temporaryRecurringCancellationsFile = path.join(
   dataDir,
   "recurring-cancellations.json.tmp",
+);
+const temporaryRecurringOverridesFile = path.join(
+  dataDir,
+  "recurring-overrides.json.tmp",
+);
+const temporaryRecurringTrainersFile = path.join(
+  dataDir,
+  "recurring-trainers.json.tmp",
 );
 const recurringHorizonDays = 28;
 const latBaseWeekMonday = "2026-05-18";
@@ -20,8 +30,73 @@ let databaseQueue = Promise.resolve();
 
 export type BookingInput = Omit<Booking, "id">;
 
+export type RecurringTrainingKey =
+  | "deti"
+  | "juniori-utery"
+  | "practise"
+  | "pohybovka"
+  | "spolecna"
+  | "juniori-patek";
+
+export type RecurringTrainerConfig = Partial<Record<RecurringTrainingKey, string>>;
+export type RecurringCancellationNotice = {
+  date: string;
+  end: string;
+  id: string;
+  start: string;
+  title: string;
+};
+type RecurringBookingOverride = {
+  trainer?: string;
+};
+type RecurringBookingOverrides = Record<string, RecurringBookingOverride>;
+
+export const recurringTrainingLabels: Array<{
+  end: string;
+  key: RecurringTrainingKey;
+  label: string;
+  schedule: string;
+  start: string;
+}> = [
+  { end: "17:00", key: "deti", label: "Děti", schedule: "Pondělí 15:15-17:00", start: "15:15" },
+  { end: "17:15", key: "juniori-utery", label: "Junioři", schedule: "Úterý 16:30-17:15", start: "16:30" },
+  { end: "19:30", key: "practise", label: "Practise", schedule: "Úterý 17:30-19:30", start: "17:30" },
+  { end: "18:00", key: "pohybovka", label: "Pohybovka", schedule: "Čtvrtek 17:15-18:00", start: "17:15" },
+  { end: "19:30", key: "spolecna", label: "Společná LAT/STT", schedule: "Čtvrtek 18:00-19:30", start: "18:00" },
+  { end: "17:00", key: "juniori-patek", label: "Junioři", schedule: "Pátek 16:00-17:00", start: "16:00" },
+];
+
 export async function getBookings() {
   return readBookings();
+}
+
+export async function getRecurringTrainers() {
+  return readRecurringTrainers();
+}
+
+export async function getRecurringCancellationNotices() {
+  const notices = (await readRecurringCancellations())
+    .map(createRecurringCancellationNotice)
+    .filter((notice): notice is RecurringCancellationNotice => Boolean(notice))
+    .filter((notice) => notice.date >= getTodayPragueDateKey())
+    .sort((left, right) =>
+      `${left.date}${left.start}`.localeCompare(`${right.date}${right.start}`),
+    );
+
+  return notices;
+}
+
+export async function updateRecurringTrainers(input: RecurringTrainerConfig) {
+  return withDatabaseLock(async () => {
+    const nextConfig = normalizeRecurringTrainers(input);
+
+    await writeRecurringTrainers(nextConfig);
+
+    const bookings = await readBookings();
+    await writeBookings(bookings);
+
+    return nextConfig;
+  });
 }
 
 export async function createBooking(input: BookingInput) {
@@ -74,6 +149,42 @@ export async function updateBooking(id: string, input: BookingInput) {
     await writeBookings(bookings);
 
     return { booking, conflict: null, notFound: false };
+  });
+}
+
+export async function updateBookingTrainer(id: string, trainer: string) {
+  return withDatabaseLock(async () => {
+    const normalizedTrainer = trainer.trim();
+
+    if (id.startsWith("recurring-")) {
+      await updateRecurringOverride(id, { trainer: normalizedTrainer || undefined });
+
+      const bookings = await readBookings();
+      await writeBookings(bookings);
+
+      return {
+        booking: bookings.find((booking) => booking.id === id) ?? null,
+        notFound: !bookings.some((booking) => booking.id === id),
+      };
+    }
+
+    const bookings = await readBookings();
+    const index = bookings.findIndex((booking) => booking.id === id);
+
+    if (index === -1) {
+      return { booking: null, notFound: true };
+    }
+
+    const booking = {
+      ...bookings[index],
+      trainer: normalizedTrainer || undefined,
+      updatedAt: new Date().toISOString(),
+    };
+
+    bookings[index] = booking;
+    await writeBookings(bookings);
+
+    return { booking, notFound: false };
   });
 }
 
@@ -218,6 +329,8 @@ export async function refreshRecurringBookings() {
 function createRecurringBookings() {
   const today = dateKeyToUtcDate(getTodayPragueDateKey());
   const cancelledIds = getRecurringCancellationsSync();
+  const recurringOverrides = getRecurringOverridesSync();
+  const recurringTrainers = getRecurringTrainersSync();
   const bookings: Booking[] = [];
 
   for (let offset = 0; offset <= recurringHorizonDays; offset += 1) {
@@ -227,7 +340,7 @@ function createRecurringBookings() {
     const dateKey = formatUtcDateKey(date);
 
     if (day === 1) {
-      pushRecurringBooking(bookings, cancelledIds, {
+      pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("deti", recurringTrainers, recurringOverrides, {
         id: `recurring-deti-${dateKey}`,
         title: "Děti",
         organizer: "Koskovi",
@@ -236,11 +349,11 @@ function createRecurringBookings() {
         end: "17:00",
         status: "confirmed",
         note: "Pravidelny pondelni trenink deti",
-      });
+      }));
     }
 
     if (day === 2) {
-      pushRecurringBooking(bookings, cancelledIds, {
+      pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("juniori-utery", recurringTrainers, recurringOverrides, {
         id: `recurring-juniori-utery-${dateKey}`,
         title: "Juniori",
         organizer: "Koskovi",
@@ -249,9 +362,9 @@ function createRecurringBookings() {
         end: "17:15",
         status: "confirmed",
         note: "Pravidelny uterni trenink junioru",
-      });
+      }));
 
-      pushRecurringBooking(bookings, cancelledIds, {
+      pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("practise", recurringTrainers, recurringOverrides, {
         id: `recurring-practise-${dateKey}`,
         title: "Practise",
         organizer: "Koskovi",
@@ -260,13 +373,13 @@ function createRecurringBookings() {
         end: "19:30",
         status: "confirmed",
         note: "Pravidelna uterni akce",
-      });
+      }));
     }
 
     if (day === 4) {
       const danceStyle = getAlternatingDanceStyle(dateKey);
 
-      pushRecurringBooking(bookings, cancelledIds, {
+      pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("pohybovka", recurringTrainers, recurringOverrides, {
         id: `recurring-pohybovka-${dateKey}`,
         title: "Pohybovka",
         organizer: "Koskovi",
@@ -275,9 +388,9 @@ function createRecurringBookings() {
         end: "18:00",
         status: "confirmed",
         note: "Pravidelna ctvrtecni akce",
-      });
+      }));
 
-      pushRecurringBooking(bookings, cancelledIds, {
+      pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("spolecna", recurringTrainers, recurringOverrides, {
         id: `recurring-spolecna-${dateKey}`,
         title: `Společná ${danceStyle}`,
         organizer: "Koskovi",
@@ -286,11 +399,11 @@ function createRecurringBookings() {
         end: "19:30",
         status: "confirmed",
         note: "LAT a STT se stridaji po tydnu",
-      });
+      }));
     }
 
     if (day === 5) {
-      pushRecurringBooking(bookings, cancelledIds, {
+      pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("juniori-patek", recurringTrainers, recurringOverrides, {
         id: `recurring-juniori-patek-${dateKey}`,
         title: "Juniori",
         organizer: "Koskovi",
@@ -299,11 +412,30 @@ function createRecurringBookings() {
         end: "17:00",
         status: "confirmed",
         note: "Pravidelny patecni trenink junioru",
-      });
+      }));
     }
   }
 
   return bookings;
+}
+
+function buildRecurringBooking(
+  key: RecurringTrainingKey,
+  recurringTrainers: RecurringTrainerConfig,
+  recurringOverrides: RecurringBookingOverrides,
+  booking: Booking,
+) {
+  const trainer = (
+    recurringOverrides[booking.id]?.trainer ??
+    recurringTrainers[key] ??
+    ""
+  ).trim();
+
+  return {
+    ...booking,
+    note: trainer ? `${booking.note}\nTrenér: ${trainer}` : booking.note,
+    trainer: trainer || undefined,
+  };
 }
 
 function pushRecurringBooking(
@@ -338,6 +470,103 @@ function getRecurringCancellationsSync() {
   }
 }
 
+function createRecurringCancellationNotice(
+  id: string,
+): RecurringCancellationNotice | null {
+  if (!id.startsWith("recurring-")) {
+    return null;
+  }
+
+  const date = id.slice(-10);
+  const key = id.slice("recurring-".length, -11) as RecurringTrainingKey;
+  const training = recurringTrainingLabels.find((item) => item.key === key);
+
+  if (!training || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return null;
+  }
+
+  return {
+    date,
+    end: training.end,
+    id,
+    start: training.start,
+    title: key === "spolecna"
+      ? training.label.replace("LAT/STT", getAlternatingDanceStyle(date))
+      : training.label,
+  };
+}
+
+async function updateRecurringOverride(
+  id: string,
+  override: RecurringBookingOverride,
+) {
+  const overrides = await readRecurringOverrides();
+  const nextOverride = {
+    ...overrides[id],
+    ...override,
+  };
+
+  if (!nextOverride.trainer) {
+    delete nextOverride.trainer;
+  }
+
+  if (Object.keys(nextOverride).length === 0) {
+    delete overrides[id];
+  } else {
+    overrides[id] = nextOverride;
+  }
+
+  await writeRecurringOverrides(overrides);
+}
+
+async function readRecurringOverrides() {
+  try {
+    return normalizeRecurringOverrides(
+      JSON.parse(await readFile(recurringOverridesFile, "utf-8")) as RecurringBookingOverrides,
+    );
+  } catch {
+    return {};
+  }
+}
+
+function getRecurringOverridesSync() {
+  try {
+    return normalizeRecurringOverrides(
+      JSON.parse(readFileSync(recurringOverridesFile, "utf-8")) as RecurringBookingOverrides,
+    );
+  } catch {
+    return {};
+  }
+}
+
+async function writeRecurringOverrides(overrides: RecurringBookingOverrides) {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(
+    temporaryRecurringOverridesFile,
+    `${JSON.stringify(normalizeRecurringOverrides(overrides), null, 2)}\n`,
+    "utf-8",
+  );
+  await rename(temporaryRecurringOverridesFile, recurringOverridesFile);
+}
+
+function normalizeRecurringOverrides(overrides: RecurringBookingOverrides) {
+  const normalized: RecurringBookingOverrides = {};
+
+  for (const [id, override] of Object.entries(overrides)) {
+    if (!id.startsWith("recurring-") || typeof override !== "object") {
+      continue;
+    }
+
+    const trainer = override.trainer?.trim();
+
+    if (trainer) {
+      normalized[id] = { trainer };
+    }
+  }
+
+  return normalized;
+}
+
 async function writeRecurringCancellations(ids: string[]) {
   await mkdir(dataDir, { recursive: true });
   await writeFile(
@@ -349,6 +578,55 @@ async function writeRecurringCancellations(ids: string[]) {
     temporaryRecurringCancellationsFile,
     recurringCancellationsFile,
   );
+}
+
+async function readRecurringTrainers() {
+  try {
+    return normalizeRecurringTrainers(
+      JSON.parse(await readFile(recurringTrainersFile, "utf-8")) as RecurringTrainerConfig,
+    );
+  } catch {
+    return {};
+  }
+}
+
+function getRecurringTrainersSync() {
+  try {
+    return normalizeRecurringTrainers(
+      JSON.parse(readFileSync(recurringTrainersFile, "utf-8")) as RecurringTrainerConfig,
+    );
+  } catch {
+    return {};
+  }
+}
+
+async function writeRecurringTrainers(config: RecurringTrainerConfig) {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(
+    temporaryRecurringTrainersFile,
+    `${JSON.stringify(normalizeRecurringTrainers(config), null, 2)}\n`,
+    "utf-8",
+  );
+  await rename(temporaryRecurringTrainersFile, recurringTrainersFile);
+}
+
+function normalizeRecurringTrainers(config: RecurringTrainerConfig) {
+  const validKeys = new Set(recurringTrainingLabels.map((training) => training.key));
+  const normalized: RecurringTrainerConfig = {};
+
+  for (const [key, value] of Object.entries(config)) {
+    if (!validKeys.has(key as RecurringTrainingKey) || typeof value !== "string") {
+      continue;
+    }
+
+    const trainer = value.trim();
+
+    if (trainer) {
+      normalized[key as RecurringTrainingKey] = trainer;
+    }
+  }
+
+  return normalized;
 }
 
 function findBookingConflict(

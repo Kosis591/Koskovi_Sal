@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     cleanupRequired: Boolean(payload.cleanupRequired),
     createdBy: actor,
     status: payload.eventType === "blokace" ? "maintenance" : "confirmed",
+    trainer: payload.trainer,
     note: [
       `Telefon: ${payload.phone}`,
       payload.email ? `E-mail: ${payload.email}` : null,

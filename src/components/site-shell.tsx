@@ -2,6 +2,12 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
+import {
+  SiteShellInfoPanel,
+  SiteShellMetrics,
+  type SiteShellInfoPanelConfig,
+  type SiteShellMetric,
+} from "@/components/site-shell-panels";
 
 type SiteShellProps = {
   actions?: ReactNode;
@@ -10,19 +16,9 @@ type SiteShellProps = {
   contentClassName?: string;
   description?: ReactNode;
   eyebrow?: ReactNode;
-  infoPanel?: {
-    items: Array<{
-      label: ReactNode;
-      value: ReactNode;
-    }>;
-    subtitle?: ReactNode;
-    title: ReactNode;
-  };
+  infoPanel?: SiteShellInfoPanelConfig;
   maxWidthClassName?: string;
-  metrics?: Array<{
-    label: ReactNode;
-    value: ReactNode;
-  }>;
+  metrics?: SiteShellMetric[];
   notice?: ReactNode;
   rightContent?: ReactNode;
   title: ReactNode;
@@ -114,61 +110,5 @@ export function SiteShell({
         {children}
       </section>
     </main>
-  );
-}
-
-function SiteShellMetrics({
-  metrics,
-}: {
-  metrics: NonNullable<SiteShellProps["metrics"]>;
-}) {
-  return (
-    <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:min-w-[520px]">
-      {metrics.map((metric) => (
-        <div
-          className="rounded-lg border border-white/15 bg-white/10 p-4 shadow-sm backdrop-blur"
-          key={`${metric.label}`}
-        >
-          <p className="text-xs font-semibold uppercase text-[#d7e6ed]">
-            {metric.label}
-          </p>
-          <p className="mt-2 text-2xl font-semibold text-white">
-            {metric.value}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function SiteShellInfoPanel({
-  panel,
-}: {
-  panel: NonNullable<SiteShellProps["infoPanel"]>;
-}) {
-  return (
-    <div className="grid gap-3 rounded-lg border border-white/15 bg-white/10 p-4 text-sm text-[#d7e6ed] md:grid-cols-[180px_1fr] md:items-start">
-      <div>
-        <p className="font-semibold text-white">{panel.title}</p>
-        {panel.subtitle ? (
-          <p className="mt-1 text-xs text-[#b9d0dc]">{panel.subtitle}</p>
-        ) : null}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {panel.items.map((item) => (
-          <div
-            className="rounded-md border border-white/10 bg-white/10 px-3 py-2"
-            key={`${item.label}`}
-          >
-            <p className="text-xs font-semibold uppercase text-[#b9d0dc]">
-              {item.label}
-            </p>
-            <p className="mt-1 text-base font-semibold text-white">
-              {item.value}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

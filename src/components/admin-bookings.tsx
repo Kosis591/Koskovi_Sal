@@ -13,7 +13,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { SiteShell } from "@/components/site-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getAdminSession, loginAdmin, logoutAdmin } from "@/lib/admin-auth-client";
-import type { Booking, BookingStatus } from "@/lib/schedule";
+import { trainerOptions, type Booking, type BookingStatus } from "@/lib/schedule";
 
 type AuditLogEntry = {
   action: string;
@@ -35,7 +35,16 @@ type BookingForm = {
   end: string;
   status: BookingStatus;
   note: string;
+  trainer: string;
 };
+
+type RecurringTrainingLabel = {
+  key: string;
+  label: string;
+  schedule: string;
+};
+
+type RecurringTrainerConfig = Record<string, string>;
 
 const emptyForm: BookingForm = {
   cleanupRequired: false,
@@ -46,19 +55,28 @@ const emptyForm: BookingForm = {
   end: "18:00",
   status: "confirmed",
   note: "",
+  trainer: "",
 };
 
 export function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [recurringTrainerLabels, setRecurringTrainerLabels] = useState<
+    RecurringTrainingLabel[]
+  >([]);
+  const [recurringTrainers, setRecurringTrainers] =
+    useState<RecurringTrainerConfig>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [sessionUsername, setSessionUsername] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSavingRecurringTrainers, setIsSavingRecurringTrainers] =
+    useState(false);
   const [message, setMessage] = useState("");
+  const [recurringTrainerMessage, setRecurringTrainerMessage] = useState("");
 
   const loadAuditLog = useCallback(async () => {
     const response = await fetch("/api/audit-log", { cache: "no-store" });
@@ -87,6 +105,24 @@ export function AdminBookings() {
     }
   }, [loadAuditLog, sessionUsername]);
 
+  const loadRecurringTrainers = useCallback(async () => {
+    const response = await fetch("/api/recurring-trainers", { cache: "no-store" });
+
+    if (!response.ok) {
+      setRecurringTrainerLabels([]);
+      setRecurringTrainers({});
+      return;
+    }
+
+    const data = (await response.json()) as {
+      labels: RecurringTrainingLabel[];
+      trainers: RecurringTrainerConfig;
+    };
+
+    setRecurringTrainerLabels(data.labels);
+    setRecurringTrainers(data.trainers);
+  }, []);
+
   useEffect(() => {
     async function loadSession() {
       const session = await getAdminSession();
@@ -106,13 +142,15 @@ export function AdminBookings() {
         if (session.username === "kosis") {
           await loadAuditLog();
         }
+
+        await loadRecurringTrainers();
       }
 
       setIsLoading(false);
     }
 
     void loadSession();
-  }, [loadAuditLog, loadBookings]);
+  }, [loadAuditLog, loadBookings, loadRecurringTrainers]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,6 +171,7 @@ export function AdminBookings() {
     const session = await getAdminSession();
     setSessionUsername(session.username ?? null);
     await loadBookings();
+    await loadRecurringTrainers();
     if (session.username === "kosis") {
       await loadAuditLog();
     }
@@ -144,7 +183,40 @@ export function AdminBookings() {
     setSessionUsername(null);
     setBookings([]);
     setAuditLog([]);
+    setRecurringTrainerLabels([]);
+    setRecurringTrainers({});
     setMessage("");
+  }
+
+  async function handleRecurringTrainerSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSavingRecurringTrainers(true);
+    setRecurringTrainerMessage("");
+
+    try {
+      const response = await fetch("/api/recurring-trainers", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trainers: recurringTrainers }),
+      });
+
+      if (!response.ok) {
+        setRecurringTrainerMessage("Trenéry se nepodařilo uložit.");
+        return;
+      }
+
+      const data = (await response.json()) as {
+        labels: RecurringTrainingLabel[];
+        trainers: RecurringTrainerConfig;
+      };
+
+      setRecurringTrainerLabels(data.labels);
+      setRecurringTrainers(data.trainers);
+      setRecurringTrainerMessage("Trenéři pravidelných tréninků jsou uložení.");
+      await loadBookings();
+    } finally {
+      setIsSavingRecurringTrainers(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -197,6 +269,7 @@ export function AdminBookings() {
       cleanupRequired: Boolean(booking.cleanupRequired),
       status: booking.status,
       note: booking.note ?? "",
+      trainer: booking.trainer ?? "",
     });
   }
 
@@ -373,6 +446,26 @@ export function AdminBookings() {
                   </label>
                 </div>
                 <label className="field-label">
+                  Trenér
+                  <select
+                    className="field-input mt-1"
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        trainer: event.target.value,
+                      }))
+                    }
+                    value={form.trainer}
+                  >
+                    <option value="">Bez vybraného trenéra</option>
+                    {trainerOptions.map((trainer) => (
+                      <option key={trainer} value={trainer}>
+                        {trainer}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field-label">
                   Poznámka
                   <textarea
                     className="field-input mt-1 min-h-24 resize-none"
@@ -433,6 +526,69 @@ export function AdminBookings() {
               </div>
             </form>
 
+            <form
+              className="rounded-lg border border-[#ded6c9] bg-white p-5"
+              onSubmit={handleRecurringTrainerSubmit}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Trenéři pravidelných tréninků
+                  </h2>
+                  <p className="mt-1 text-sm text-[#66706f]">
+                    Trenér se propíše do všech budoucích automaticky vytvářených
+                    termínů.
+                  </p>
+                </div>
+                <CalendarPlus className="text-[#003758]" size={24} />
+              </div>
+              <div className="mt-5 grid gap-3">
+                {recurringTrainerLabels.map((training) => (
+                  <label
+                    className="grid gap-2 rounded-md border border-[#ded6c9] bg-[#fcfaf6] p-3 text-sm sm:grid-cols-[1fr_180px] sm:items-center"
+                    key={training.key}
+                  >
+                    <span>
+                      <span className="block font-semibold">{training.label}</span>
+                      <span className="mt-0.5 block text-xs text-[#66706f]">
+                        {training.schedule}
+                      </span>
+                    </span>
+                    <select
+                      className="field-input"
+                      onChange={(event) =>
+                        setRecurringTrainers((current) => ({
+                          ...current,
+                          [training.key]: event.target.value,
+                        }))
+                      }
+                      value={recurringTrainers[training.key] ?? ""}
+                    >
+                      <option value="">Bez trenéra</option>
+                      {trainerOptions.map((trainer) => (
+                        <option key={trainer} value={trainer}>
+                          {trainer}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              {recurringTrainerMessage ? (
+                <p className="mt-3 flex items-center gap-2 text-sm text-[#245d3f]">
+                  <Check size={16} />
+                  {recurringTrainerMessage}
+                </p>
+              ) : null}
+              <button
+                className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={isSavingRecurringTrainers}
+                type="submit"
+              >
+                {isSavingRecurringTrainers ? "Ukládám..." : "Uložit trenéry"}
+              </button>
+            </form>
+
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div className="border-b border-[#ded6c9] px-5 py-4">
                 <h2 className="text-xl font-semibold">Všechny akce</h2>
@@ -464,6 +620,11 @@ export function AdminBookings() {
                           <p className="text-xs text-[#66706f]">
                             {booking.organizer}
                           </p>
+                          {booking.trainer ? (
+                            <p className="text-xs font-semibold text-[#003758]">
+                              Trenér: {booking.trainer}
+                            </p>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-semibold">
