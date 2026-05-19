@@ -263,6 +263,15 @@ export function BookingDashboard({
     };
 
   useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSelectedDate(todayDateKey);
+      setRequest((current) => ({ ...current, date: todayDateKey }));
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [todayDateKey]);
+
+  useEffect(() => {
     const timeout = window.setTimeout(() => setNow(new Date()), 0);
     const interval = window.setInterval(() => setNow(new Date()), 30000);
 
