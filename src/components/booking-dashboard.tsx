@@ -499,7 +499,7 @@ export function BookingDashboard({
               />
               <Metric
                 label="Tento tyden"
-                value={`${weeklyEventCount} akce`}
+                value={formatEventCount(weeklyEventCount)}
                 tone="banner"
               />
             </div>
@@ -693,7 +693,7 @@ export function BookingDashboard({
                         {dayFormatter.format(todayDate)}
                       </span>
                       <span className="mt-1 block text-xs text-[#d7e6ed]">
-                        {bookingDayCounts.get(todayDateKey) ?? 0} akce
+                        {formatEventCount(bookingDayCounts.get(todayDateKey) ?? 0)}
                       </span>
                     </button>
                   </div>
@@ -835,7 +835,7 @@ export function BookingDashboard({
                               isSelected ? "text-[#d7e6ed]" : "text-[#66706f]"
                             }`}
                           >
-                            {bookingDayCounts.get(key) ?? 0} akce
+                            {formatEventCount(bookingDayCounts.get(key) ?? 0)}
                           </span>
                         </button>
                       );
@@ -1020,7 +1020,7 @@ export function BookingDashboard({
                               isSelected ? "text-[#d7e6ed]" : "text-[#66706f]"
                             }`}
                           >
-                            {bookingCount} akce
+                            {formatEventCount(bookingCount)}
                           </span>
                         </button>
 
@@ -1586,7 +1586,7 @@ function MobileCalendarSummary({
                     isSelected ? "text-[#d7e6ed]" : "text-[#66706f]"
                   }`}
                 >
-                  {bookingDayCounts.get(dateKey) ?? 0} akce
+                  {formatEventCount(bookingDayCounts.get(dateKey) ?? 0)}
                 </span>
               </button>
             );
@@ -1620,6 +1620,14 @@ function getWeekStartDate(dateKey: string) {
   date.setDate(date.getDate() - day + 1);
 
   return date;
+}
+
+function formatEventCount(count: number) {
+  if (count >= 5 || count === 0) {
+    return `${count} akci`;
+  }
+
+  return `${count} akce`;
 }
 
 function getSlotStateKey(dateKey: string, time: string) {
