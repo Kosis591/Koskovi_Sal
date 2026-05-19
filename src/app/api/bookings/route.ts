@@ -6,7 +6,7 @@ import { createBooking, getBookings, type BookingInput } from "@/lib/bookings-db
 
 export async function GET() {
   if (!isAdminRequest(await cookies())) {
-    return NextResponse.json({ message: "Neprihlaseno." }, { status: 401 });
+    return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
   }
 
   return NextResponse.json({ bookings: await getBookings() });
@@ -17,14 +17,14 @@ export async function POST(request: NextRequest) {
   const actor = getAdminRequestUsername(cookieStore) ?? "unknown";
 
   if (!isAdminRequest(cookieStore)) {
-    return NextResponse.json({ message: "Neprihlaseno." }, { status: 401 });
+    return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
   }
 
   const input = (await request.json()) as BookingInput;
 
   if (!input.title || !input.date || !input.start || !input.end) {
     return NextResponse.json(
-      { message: "Chybi povinne udaje akce." },
+      { message: "Chybí povinné údaje akce." },
       { status: 400 },
     );
   }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   if (result.conflict) {
     return NextResponse.json(
       {
-        message: "V tomto case uz existuje jina akce.",
+        message: "V tomto čase už existuje jiná akce.",
         conflict: result.conflict,
       },
       { status: 409 },

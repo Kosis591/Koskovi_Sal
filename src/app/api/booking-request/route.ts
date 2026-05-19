@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   if (!isAdminRequest(cookieStore)) {
     return NextResponse.json(
-      { message: "Pro vytvoreni rezervace je nutne prihlaseni." },
+      { message: "Pro vytvoření rezervace je nutné přihlášení." },
       { status: 401 },
     );
   }
@@ -21,21 +21,21 @@ export async function POST(request: NextRequest) {
 
   if (!payload.name || !payload.phone || !payload.date || !payload.start || !payload.end) {
     return NextResponse.json(
-      { message: "Chybi povinne udaje rezervace." },
+      { message: "Chybí povinné údaje rezervace." },
       { status: 400 },
     );
   }
 
   if (!isValidPhone(payload.phone)) {
     return NextResponse.json(
-      { message: "Telefon musi byt ve spravnem tvaru." },
+      { message: "Telefon musí být ve správném tvaru." },
       { status: 400 },
     );
   }
 
   if (!isValidOptionalEmail(payload.email)) {
     return NextResponse.json(
-      { message: "E-mail musi byt ve spravnem tvaru." },
+      { message: "E-mail musí být ve správném tvaru." },
       { status: 400 },
     );
   }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     note: [
       `Telefon: ${payload.phone}`,
       payload.email ? `E-mail: ${payload.email}` : null,
-      payload.trainer ? `Trener: ${payload.trainer}` : null,
+      payload.trainer ? `Trenér: ${payload.trainer}` : null,
       payload.note,
     ]
       .filter(Boolean)
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
   if (result.conflict) {
     return NextResponse.json(
       {
-        message: "V tomto case uz existuje jina akce.",
+        message: "V tomto čase už existuje jiná akce.",
         conflict: result.conflict,
       },
       { status: 409 },
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     status: "accepted",
     source: "database",
-    message: "Rezervace je ulozena v databazi.",
+    message: "Rezervace je uložena v databázi.",
     booking: result.booking,
   });
 }

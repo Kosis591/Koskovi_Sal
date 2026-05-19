@@ -21,7 +21,9 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { SiteShell } from "@/components/site-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { loginAdmin, logoutAdmin } from "@/lib/admin-auth-client";
 import {
   createTimeSlots,
   getOpeningHoursForDate,
@@ -77,7 +79,7 @@ const slotFillStyles = {
 const partialAvailableCellStyle = "bg-white";
 const selectedPartialAvailableCellStyle = "selected-period-cell bg-[#eef7fb]";
 
-const trainerOptions = ["Barca", "Jirka", "Marek", "Sarka", "Kamca", "Externi"];
+const trainerOptions = ["Barča", "Jirka", "Marek", "Šárka", "Kamča", "Externí"];
 
 const initialRequest: BookingRequest = {
   name: "",
@@ -291,7 +293,7 @@ export function BookingDashboard({
     });
     const timeout = window.setTimeout(() => {
       scrollCurrentTimeIntoView(calendarScrollerRef.current);
-    }, 250);
+    }, 360);
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
@@ -325,21 +327,25 @@ export function BookingDashboard({
     setRequest((current) => ({ ...current, cleanupRequired: value }));
   }
 
+  function changeViewMode(nextViewMode: "today" | "week" | "month") {
+    setViewMode(nextViewMode);
+
+    if (nextViewMode === "today" || nextViewMode === "month") {
+      setSelectedDate(todayDateKey);
+      updateRequest("date", todayDateKey);
+    }
+  }
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAuthError("");
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ password, username }),
-    });
-
-    if (!response.ok) {
-      const data = (await response.json()) as { message?: string };
-      setAuthError(data.message ?? "Prihlaseni se nepodarilo.");
+    try {
+      await loginAdmin(username, password);
+    } catch (error) {
+      setAuthError(
+        error instanceof Error ? error.message : "Přihlášení se nepodařilo.",
+      );
       return;
     }
 
@@ -349,7 +355,7 @@ export function BookingDashboard({
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await logoutAdmin();
     setIsAuthenticated(false);
     setSubmitMessage("");
   }
@@ -369,17 +375,17 @@ export function BookingDashboard({
       });
 
       if (response.status === 409) {
-        setSubmitMessage("V tomto case uz existuje jina akce.");
+        setSubmitMessage("V tomto čase už existuje jiná akce.");
         return;
       }
 
       if (!response.ok) {
         const data = (await response.json()) as { message?: string };
-        setSubmitMessage(data.message ?? "Rezervaci se nepodarilo ulozit.");
+        setSubmitMessage(data.message ?? "Rezervaci se nepodařilo uložit.");
         return;
       }
 
-      setSubmitMessage("Rezervace je ulozena v databazi.");
+      setSubmitMessage("Rezervace je uložena v databázi.");
       await syncCalendar();
     } finally {
       setIsSubmitting(false);
@@ -397,11 +403,11 @@ export function BookingDashboard({
 
       if (!response.ok) {
         const data = (await response.json()) as { message?: string };
-        setCleanupMessage(data.message ?? "Uklid se nepodarilo potvrdit.");
+        setCleanupMessage(data.message ?? "Úklid se nepodařilo potvrdit.");
         return;
       }
 
-      setCleanupMessage("Dekujeme, sal je oznacen jako uklizeny.");
+      setCleanupMessage("Děkujeme, sál je označen jako uklizený.");
       await syncCalendar();
     } finally {
       setCleaningBookingId("");
@@ -411,7 +417,7 @@ export function BookingDashboard({
   async function handleDeleteBooking(bookingId: string, title: string) {
     const isRecurringBooking = isRecurringBookingId(bookingId);
     const confirmMessage = isRecurringBooking
-      ? `Opravdu zrusit jen tento termin "${title}"? Pravidelne treninky v dalsich tydnech zustanou.`
+      ? `Opravdu zrušit jen tento termín "${title}"? Pravidelné tréninky v dalších týdnech zůstanou.`
       : `Opravdu smazat akci "${title}"?`;
 
     if (!window.confirm(confirmMessage)) {
@@ -428,14 +434,14 @@ export function BookingDashboard({
 
       if (!response.ok) {
         const data = (await response.json()) as { message?: string };
-        setDeleteMessage(data.message ?? "Akci se nepodarilo smazat.");
+        setDeleteMessage(data.message ?? "Akci se nepodařilo smazat.");
         return;
       }
 
       setDeleteMessage(
         isRecurringBooking
-          ? "Tento termin pravidelne akce byl zrusen."
-          : "Akce byla smazana.",
+          ? "Tento termín pravidelné akce byl zrušen."
+          : "Akce byla smazána.",
       );
       await syncCalendar();
     } finally {
@@ -444,130 +450,88 @@ export function BookingDashboard({
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f3ec] text-[#132935]">
-      <section className="relative overflow-hidden border-b border-[#002d48] bg-[#003758] text-white">
-        <Image
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-8 top-1/2 hidden h-auto w-80 -translate-y-1/2 opacity-10 md:block"
-          height={62}
-          src="/brand/Koskovi_logo_znak_white.svg"
-          width={71}
-        />
-        <div className="relative mx-auto flex max-w-[1600px] flex-col gap-8 px-5 py-8 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-4">
-              <Image
-                alt="Koskovi"
-                className="h-auto w-52"
-                height={62}
-                priority
-                src="/brand/Koskovi_logo_zaklad_white.svg"
-                width={369}
-              />
-              <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[#d7e6ed]">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
-                  <Sparkles size={15} />
-                  Rezervace salu
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <MapPin size={15} />
-                  {hallSettings.location}
-                </span>
-              </div>
-              <div>
-                <h1 className="text-4xl font-semibold tracking-normal text-white sm:text-5xl">
-                  Dostupnost tanecniho salu
-                </h1>
-                <p className="mt-3 max-w-2xl text-base leading-7 text-[#d7e6ed]">
-                  Přehled dostupnosti pro lekce, workshopy a společenské akce
-                  Koškovi.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:min-w-[520px]">
-              <Metric
-                label="Dnes volno"
-                value={`${freeHours.toLocaleString("cs-CZ")} h`}
-                tone="banner"
-              />
-              <Metric
-                label="Dnes otevreno"
-                value={todaysOpeningHours}
-                tone="banner"
-              />
-              <Metric
-                label="Tento tyden"
-                value={formatEventCount(weeklyEventCount)}
-                tone="banner"
-              />
-            </div>
-          </div>
-          <div className="grid gap-3 rounded-lg border border-white/15 bg-white/10 p-4 text-sm text-[#d7e6ed] md:grid-cols-[180px_1fr] md:items-start">
-            <div>
-              <p className="font-semibold text-white">Otevírací doba</p>
-              <p className="mt-1 text-xs text-[#b9d0dc]">Pravidelný provoz sálu</p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {openingHoursGroups.map((group) => (
-                <div
-                  className="rounded-md border border-white/10 bg-white/10 px-3 py-2"
-                  key={group.days}
-                >
-                  <p className="text-xs font-semibold uppercase text-[#b9d0dc]">
-                    {group.days}
-                  </p>
-                  <p className="mt-1 text-base font-semibold text-white">
-                    {group.hours}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-          {todayInfo ? (
-            <div className="rounded-lg border border-white/15 bg-white/10 p-4 text-sm text-[#d7e6ed]">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="font-semibold text-white">
-                  Dnes je {todayInfo.dateLabel}
-                </span>
-                <span>{todayInfo.weekLabel}</span>
-                {todayInfo.nameDay ? (
-                  <span>Svatek ma {todayInfo.nameDay}</span>
-                ) : null}
-                {todayInfo.isHoliday && todayInfo.holidayName ? (
-                  <span className="rounded-full border border-[#f0c96b]/50 bg-[#f0c96b]/15 px-2.5 py-1 font-semibold text-[#fff8de]">
-                    {todayInfo.holidayName}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
+    <SiteShell
+      contentClassName="grid gap-6 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 xl:grid-cols-[minmax(0,1fr)_400px]"
+      description={
+        <>
+          Přehled dostupnosti pro lekce, workshopy a společenské akce Koškovi.
+        </>
+      }
+      eyebrow={
+        <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[#d7e6ed]">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+            <Sparkles size={15} />
+            Rezervace sálu
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <MapPin size={15} />
+            {hallSettings.location}
+          </span>
         </div>
-      </section>
-
-      <section className="mx-auto grid max-w-[1600px] gap-6 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 xl:grid-cols-[minmax(0,1fr)_400px]">
+      }
+      infoPanel={{
+        items: openingHoursGroups.map((group) => ({
+          label: group.days,
+          value: group.hours,
+        })),
+        subtitle: "Pravidelný provoz sálu",
+        title: "Otevírací doba",
+      }}
+      metrics={[
+        {
+          label: "Dnes volno",
+          value: `${freeHours.toLocaleString("cs-CZ")} h`,
+        },
+        {
+          label: "Dnes otevřeno",
+          value: todaysOpeningHours,
+        },
+        {
+          label: "Tento týden",
+          value: formatEventCount(weeklyEventCount),
+        },
+      ]}
+      notice={
+        todayInfo ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="font-semibold text-white">
+              Dnes je {todayInfo.dateLabel}
+            </span>
+            <span>{todayInfo.weekLabel}</span>
+            {todayInfo.nameDay ? (
+              <span>Svátek má {todayInfo.nameDay}</span>
+            ) : null}
+            {todayInfo.isHoliday && todayInfo.holidayName ? (
+              <span className="rounded-full border border-[#f0c96b]/50 bg-[#f0c96b]/15 px-2.5 py-1 font-semibold text-[#fff8de]">
+                {todayInfo.holidayName}
+              </span>
+            ) : null}
+          </div>
+        ) : null
+      }
+      title="Dostupnost tanečního sálu"
+    >
         <div className="min-w-0 space-y-6">
           <div className="flex flex-col gap-4 border-b border-[#ded6c9] pb-5 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold">
                 {viewMode === "today"
-                  ? "Dnesni dostupnost"
+                  ? "Dnešní dostupnost"
                   : viewMode === "week"
-                    ? "Tydenni dostupnost"
-                    : `Mesicni dostupnost - ${monthLabelFormatter.format(
+                    ? "Týdenní dostupnost"
+                    : `Měsíční dostupnost - ${monthLabelFormatter.format(
                         new Date(`${selectedDate}T12:00:00`),
                       )}`}
               </h2>
               <p className="mt-1 text-sm text-[#66706f]">
                 {viewMode === "week"
                   ? "Kliknutím na den zobrazíš rychlý detail a volné časy."
-                  : "Dny jsou pod sebou, casy najdes v horni hlavicce tabulky."}
+                  : "Dny jsou pod sebou, časy najdeš v horní hlavičce tabulky."}
               </p>
             </div>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
               <label className="mobile-view-select field-label">
-                Zobrazeni
+                Zobrazení
                 <select
                   className="field-input mt-1"
                   onChange={(event) => {
@@ -576,18 +540,13 @@ export function BookingDashboard({
                       | "week"
                       | "month";
 
-                    setViewMode(nextViewMode);
-
-                    if (nextViewMode === "today" || nextViewMode === "month") {
-                      setSelectedDate(todayDateKey);
-                      updateRequest("date", todayDateKey);
-                    }
+                    changeViewMode(nextViewMode);
                   }}
                   value={viewMode}
                 >
                   <option value="today">Dnes</option>
-                  <option value="week">Tyden</option>
-                  <option value="month">Mesic</option>
+                  <option value="week">Týden</option>
+                  <option value="month">Měsíc</option>
                 </select>
               </label>
 
@@ -599,9 +558,7 @@ export function BookingDashboard({
                       : "text-[#35505b] hover:bg-[#f6f1e8]"
                   }`}
                   onClick={() => {
-                    setViewMode("today");
-                    setSelectedDate(todayDateKey);
-                    updateRequest("date", todayDateKey);
+                    changeViewMode("today");
                   }}
                   type="button"
                 >
@@ -614,11 +571,11 @@ export function BookingDashboard({
                       ? "bg-[#003758] text-white"
                       : "text-[#35505b] hover:bg-[#f6f1e8]"
                   }`}
-                  onClick={() => setViewMode("week")}
+                  onClick={() => changeViewMode("week")}
                   type="button"
                 >
                   <CalendarDays size={16} />
-                  Tyden
+                  Týden
                 </button>
                 <button
                   className={`inline-flex items-center gap-1.5 border-l border-[#ded6c9] px-2 text-xs font-semibold transition md:gap-2 md:px-3 md:text-sm ${
@@ -626,11 +583,11 @@ export function BookingDashboard({
                       ? "bg-[#003758] text-white"
                       : "text-[#35505b] hover:bg-[#f6f1e8]"
                   }`}
-                  onClick={() => setViewMode("month")}
+                  onClick={() => changeViewMode("month")}
                   type="button"
                 >
                   <CalendarDays size={16} />
-                  Mesic
+                  Měsíc
                 </button>
               </div>
               <div className="flex w-full items-center gap-3 sm:w-auto">
@@ -658,18 +615,20 @@ export function BookingDashboard({
             </div>
           ) : null}
 
-          <MobileCalendarSummary
-            bookingDayCounts={bookingDayCounts}
-            days={viewMode === "month" ? monthDays : days}
-            onSelectDate={(dateKey) => {
-              setSelectedDate(dateKey);
-              updateRequest("date", dateKey);
-            }}
-            selectedDate={selectedDate}
-            viewMode={viewMode}
-          />
+          <div className="calendar-view-transition lg:hidden" key={`mobile-${viewMode}`}>
+            <MobileCalendarSummary
+              bookingDayCounts={bookingDayCounts}
+              days={viewMode === "month" ? monthDays : days}
+              onSelectDate={(dateKey) => {
+                setSelectedDate(dateKey);
+                updateRequest("date", dateKey);
+              }}
+              selectedDate={selectedDate}
+              viewMode={viewMode}
+            />
+          </div>
 
-          <div className="hidden lg:block">
+          <div className="calendar-view-transition hidden lg:block" key={`desktop-${viewMode}`}>
           {viewMode === "today" ? (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
@@ -741,7 +700,7 @@ export function BookingDashboard({
                             booking
                               ? `${booking.title} (${booking.start}-${booking.end})`
                               : cleanupBooking
-                                ? `Ceka na uklid po akci ${cleanupBooking.title}`
+                                ? `Čeká na úklid po akci ${cleanupBooking.title}`
                               : undefined
                           }
                           type="button"
@@ -780,7 +739,7 @@ export function BookingDashboard({
                           ) : cleanupBooking ? (
                             <span className="relative z-10 block max-w-full overflow-hidden">
                               <span className="block truncate font-semibold">
-                                Ceka na uklid
+                                Čeká na úklid
                               </span>
                               <span className="mt-1 block max-w-full truncate leading-4">
                                 Po akci {cleanupBooking.title}
@@ -899,7 +858,7 @@ export function BookingDashboard({
                               booking
                                 ? `${booking.title} (${booking.start}-${booking.end})`
                                 : cleanupBooking
-                                  ? `Ceka na uklid po akci ${cleanupBooking.title}`
+                                  ? `Čeká na úklid po akci ${cleanupBooking.title}`
                                 : undefined
                             }
                             data-current-slot={
@@ -928,7 +887,7 @@ export function BookingDashboard({
                               </span>
                             ) : null}
                             {!isOpen ? (
-                              <span className="block font-medium">Zavreno</span>
+                              <span className="block font-medium">Zavřeno</span>
                             ) : booking ? (
                               <span className="relative z-10 block max-w-full overflow-hidden">
                                 <span className="block truncate font-semibold">
@@ -941,7 +900,7 @@ export function BookingDashboard({
                             ) : cleanupBooking ? (
                               <span className="relative z-10 block max-w-full overflow-hidden">
                                 <span className="block truncate font-semibold">
-                                  Ceka na uklid
+                                  Čeká na úklid
                                 </span>
                                 <span className="mt-1 block max-w-full truncate leading-4">
                                   Po akci {cleanupBooking.title}
@@ -1073,7 +1032,7 @@ export function BookingDashboard({
                                 booking
                                   ? `${booking.title} (${booking.start}-${booking.end})`
                                   : cleanupBooking
-                                    ? `Ceka na uklid po akci ${cleanupBooking.title}`
+                                    ? `Čeká na úklid po akci ${cleanupBooking.title}`
                                   : undefined
                               }
                               data-current-slot={
@@ -1103,7 +1062,7 @@ export function BookingDashboard({
                               ) : null}
                               {!isOpen ? (
                                 <span className="block truncate font-medium">
-                                  Zavreno
+                                  Zavřeno
                                 </span>
                               ) : booking ? (
                                 <span className="relative z-10 block max-w-full overflow-hidden">
@@ -1117,7 +1076,7 @@ export function BookingDashboard({
                               ) : cleanupBooking ? (
                                 <span className="relative z-10 block max-w-full overflow-hidden">
                                   <span className="block truncate font-semibold">
-                                    Ceka na uklid
+                                    Čeká na úklid
                                   </span>
                                   <span className="mt-0.5 block truncate">
                                     Po akci
@@ -1212,7 +1171,7 @@ export function BookingDashboard({
                         <Check size={13} />
                         {cleaningBookingId === segment.cleanupBookingId
                           ? "Potvrzuji..."
-                          : "Uklidil jsem sal"}
+                          : "Uklidil jsem sál"}
                       </button>
                     ) : null}
                     {isAuthenticated &&
@@ -1229,7 +1188,7 @@ export function BookingDashboard({
                         {deletingBookingId === segment.bookingId
                           ? "Mazu..."
                           : isRecurringBookingId(segment.bookingId)
-                            ? "Zrusit tento termin"
+                            ? "Zrušit tento termín"
                             : "Smazat akci"}
                       </button>
                     ) : null}
@@ -1290,7 +1249,7 @@ export function BookingDashboard({
           <div className="rounded-lg border border-[#ded6c9] bg-white p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold">Rezervace salu</h2>
+                <h2 className="text-xl font-semibold">Rezervace sálu</h2>
                 <p className="mt-1 text-sm leading-6 text-[#66706f]">
                   Vkládání rezervací je dostupné jen po přihlášení správce.
                 </p>
@@ -1315,12 +1274,12 @@ export function BookingDashboard({
                     type="button"
                   >
                     <LogOut size={14} />
-                    Odhlasit
+                    Odhlásit
                   </button>
                 </div>
 
                 <div className="grid gap-3">
-                  <Field icon={<User size={16} />} label="Nazev / poradatel">
+                  <Field icon={<User size={16} />} label="Název / pořadatel">
                     <input
                       className="field-input"
                       onChange={(event) =>
@@ -1413,7 +1372,7 @@ export function BookingDashboard({
                     </label>
                     {request.eventType === "tanecni-lekce" ? (
                       <label className="field-label col-span-2">
-                        Trener
+                        Trenér
                         <select
                           className="field-input mt-1"
                           onChange={(event) =>
@@ -1421,7 +1380,7 @@ export function BookingDashboard({
                           }
                           value={request.trainer}
                         >
-                          <option value="">Bez vybraneho trenera</option>
+                          <option value="">Bez vybraného trenéra</option>
                           {trainerOptions.map((trainer) => (
                             <option key={trainer} value={trainer}>
                               {trainer}
@@ -1433,13 +1392,13 @@ export function BookingDashboard({
                   </div>
 
                   <label className="field-label">
-                    Poznamka
+                    Poznámka
                     <textarea
                       className="field-input mt-1 min-h-24 resize-none"
                       onChange={(event) =>
                         updateRequest("note", event.target.value)
                       }
-                      placeholder="Pocet lidi, priprava salu, technika..."
+                      placeholder="Počet lidí, příprava sálu, technika..."
                       value={request.note}
                     />
                   </label>
@@ -1454,10 +1413,10 @@ export function BookingDashboard({
                       type="checkbox"
                     />
                     <span>
-                      Sal po akci bude potreba uklidit
+                      Sál po akci bude potřeba uklidit
                       <span className="mt-1 block text-xs font-medium text-[#66706f]">
-                        Po konci akce se misto volna ukaze cekani na uklid,
-                        dokud ho nekdo nepotvrdi.
+                        Po konci akce se místo volna ukáže čekání na úklid,
+                        dokud ho někdo nepotvrdí.
                       </span>
                     </span>
                   </label>
@@ -1476,13 +1435,13 @@ export function BookingDashboard({
                   type="submit"
                 >
                   <Send size={17} />
-                  {isSubmitting ? "Ukladam..." : "Ulozit rezervaci"}
+                  {isSubmitting ? "Ukládám..." : "Uložit rezervaci"}
                 </button>
               </form>
             ) : (
               <form className="mt-5 space-y-3" onSubmit={handleLogin}>
                 <label className="field-label">
-                  Jmeno spravce
+                  Jméno správce
                   <input
                     className="field-input mt-1"
                     onChange={(event) => setUsername(event.target.value)}
@@ -1492,7 +1451,7 @@ export function BookingDashboard({
                   />
                 </label>
                 <label className="field-label">
-                  Heslo spravce
+                  Heslo správce
                   <input
                     className="field-input mt-1"
                     onChange={(event) => setPassword(event.target.value)}
@@ -1515,15 +1474,13 @@ export function BookingDashboard({
                   type="submit"
                 >
                   <LogIn size={17} />
-                  Prihlasit
+                  Přihlásit
                 </button>
               </form>
             )}
           </div>
         </aside>
-      </section>
-
-    </main>
+    </SiteShell>
   );
 }
 
@@ -1624,7 +1581,7 @@ function getWeekStartDate(dateKey: string) {
 
 function formatEventCount(count: number) {
   if (count >= 5 || count === 0) {
-    return `${count} akci`;
+    return `${count} akcí`;
   }
 
   return `${count} akce`;
@@ -1664,7 +1621,7 @@ function getDayAvailabilitySegments(
         end: "23:59",
         kind: "closed",
         start: "00:00",
-        title: "Zavreno",
+        title: "Zavřeno",
       },
     ];
   }
@@ -1698,7 +1655,7 @@ function getDayAvailabilitySegments(
             end: slotEnd,
             kind: "cleanup",
             start: slot,
-            title: "Ceka na uklid",
+            title: "Čeká na úklid",
           }
         : {
             end: slotEnd,
@@ -1724,7 +1681,7 @@ function getDayAvailabilitySegments(
           end: openingHours.end,
           kind: "free",
           start: openingHours.start,
-          title: "Volno cely den",
+          title: "Volno celý den",
         },
       ];
 }
@@ -1993,33 +1950,5 @@ function Field({
       </span>
       {children}
     </label>
-  );
-}
-
-function Metric({
-  label,
-  tone = "default",
-  value,
-}: {
-  label: string;
-  tone?: "default" | "banner";
-  value: string;
-}) {
-  if (tone === "banner") {
-    return (
-      <div className="rounded-lg border border-white/15 bg-white/10 p-4 shadow-sm backdrop-blur">
-        <p className="text-xs font-semibold uppercase text-[#d7e6ed]">
-          {label}
-        </p>
-        <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-[#ded6c9] bg-white p-4">
-      <p className="text-xs font-semibold uppercase text-[#66706f]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-    </div>
   );
 }

@@ -29,6 +29,6 @@ export async function POST(_request: NextRequest, context: RouteContext) {
   return NextResponse.json({
     booking: result.booking,
     cleaned: true,
-    message: "Sal je oznacen jako uklizeny.",
+    message: "Sál je označen jako uklizený.",
   });
 }

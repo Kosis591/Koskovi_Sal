@@ -1,72 +1,10 @@
-(node:6236) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
-(Use `node --trace-deprecation ...` to show where the warning was created)
- ⚠ Fast Refresh had to perform a full reload due to a runtime error.
- ⨯ ReferenceError: cleanupNoticeBooking is not defined
-    at BookingDashboard (src\components\booking-dashboard.tsx:1332:8)
-  1330 |       </section>
-  1331 |
-> 1332 |       {cleanupNoticeBooking ? (
-       |        ^
-  1333 |         <div className="fixed right-4 top-4 z-50 w-[calc(100%-2rem)] max-w-sm rounded-lg border border-[#e1b554] bg-[#fff6d8] p-4 text-[#5e4300] shadow-[0_18px_45px_rgba(19,41,53,0.24)] sm:right-6 sm:top-6 sm:w-full">
-  1334 |           <p className="flex items-center gap-2 text-sm font-semibold">
-  1335 |             <AlertCircle size={17} /> {
-  digest: '1989018962'
+ ⨯ Failed to start server
+Error: listen EADDRINUSE: address already in use :::3000
+    at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+    at new Promise (<anonymous>) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
 }
- ⨯ Error: Cannot find module './873.js'
-Require stack:
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\webpack-runtime.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\app\favicon.ico\route.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\require.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\load-components.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\utils.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\swc\options.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\swc\index.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\next-config-ts\transpile-config.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\config.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\next.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\lib\start-server.js
-    at <unknown> (C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\app\favicon.ico\route.js:1:27280)
-    at Object.<anonymous> (C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\app\favicon.ico\route.js:1:27330) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [Array],
-  page: '/favicon.ico'
-}
- ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\client-development\4.pack.gz_' -> 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\client-development\4.pack.gz'
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\server-development\1.pack.gz_' -> 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\server-development\1.pack.gz'
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\client-development\0.pack.gz'
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\server-development\0.pack.gz_' -> 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\server-development\0.pack.gz'
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\client-development\0.pack.gz'
- ⚠ Fast Refresh had to perform a full reload due to a runtime error.
- ⨯ TypeError: Cannot read properties of undefined (reading 'map')
-    at MobileCalendarSummary (src\components\booking-dashboard.tsx:1470:21)
-  1468 |
-  1469 |         <div className="mt-4 space-y-2">
-> 1470 |           {segments.map((segment) => (
-       |                     ^
-  1471 |             <div
-  1472 |               className={`grid grid-cols-[82px_1fr] items-center gap-3 rounded-md border px-3 py-2 text-sm ${
-  1473 |                 segment.kind === "free" {
-  digest: '898363021'
-}
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\server-development\0.pack.gz_' -> 'C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\cache\webpack\server-development\0.pack.gz'
- ⨯ Error: Cannot find module './873.js'
-Require stack:
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\webpack-runtime.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\app\api\auth\session\route.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\require.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\load-components.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\utils.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\swc\options.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\swc\index.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\build\next-config-ts\transpile-config.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\config.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\next.js
-- C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\node_modules\next\dist\server\lib\start-server.js
-    at <unknown> (C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\app\favicon.ico\route.js:1:27280)
-    at Object.<anonymous> (C:\Users\Admin\Documents\Codex\2026-05-17\budeme-vytv-et-aplikaci-v-reactu\Koskovi_Sal\.next\server\app\favicon.ico\route.js:1:27330) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [Array],
-  page: '/favicon.ico'
-}
-^C^C

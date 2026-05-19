@@ -8,10 +8,11 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { SiteShell } from "@/components/site-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getAdminSession, loginAdmin, logoutAdmin } from "@/lib/admin-auth-client";
 import type { Booking, BookingStatus } from "@/lib/schedule";
 
 type AuditLogEntry = {
@@ -88,11 +89,7 @@ export function AdminBookings() {
 
   useEffect(() => {
     async function loadSession() {
-      const response = await fetch("/api/auth/session");
-      const session = (await response.json()) as {
-        authenticated: boolean;
-        username?: string | null;
-      };
+      const session = await getAdminSession();
       setIsAuthenticated(session.authenticated);
       setSessionUsername(session.username ?? null);
 
@@ -121,26 +118,19 @@ export function AdminBookings() {
     event.preventDefault();
     setMessage("");
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      const data = (await response.json()) as { message?: string };
-      setMessage(data.message ?? "Prihlaseni se nepodarilo.");
+    try {
+      await loginAdmin(username, password);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Přihlášení se nezdařilo.",
+      );
       return;
     }
 
     setUsername("");
     setPassword("");
     setIsAuthenticated(true);
-    const sessionResponse = await fetch("/api/auth/session");
-    const session = (await sessionResponse.json()) as {
-      authenticated: boolean;
-      username?: string | null;
-    };
+    const session = await getAdminSession();
     setSessionUsername(session.username ?? null);
     await loadBookings();
     if (session.username === "kosis") {
@@ -149,7 +139,7 @@ export function AdminBookings() {
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await logoutAdmin();
     setIsAuthenticated(false);
     setSessionUsername(null);
     setBookings([]);
@@ -169,18 +159,18 @@ export function AdminBookings() {
     });
 
     if (response.status === 409) {
-      setMessage("V tomto case uz existuje jina akce.");
+      setMessage("V tomto čase už existuje jiná akce.");
       return;
     }
 
     if (!response.ok) {
-      setMessage("Akci se nepodarilo ulozit.");
+      setMessage("Akci se nepodařilo uložit.");
       return;
     }
 
     setForm(emptyForm);
     setEditingId(null);
-    setMessage("Akce je ulozena.");
+    setMessage("Akce je uložena.");
     await loadBookings();
   }
 
@@ -188,11 +178,11 @@ export function AdminBookings() {
     const response = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
 
     if (!response.ok) {
-      setMessage("Akci se nepodarilo smazat.");
+      setMessage("Akci se nepodařilo smazat.");
       return;
     }
 
-    setMessage("Akce je smazana.");
+    setMessage("Akce je smazána.");
     await loadBookings();
   }
 
@@ -211,30 +201,15 @@ export function AdminBookings() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f3ec] text-[#132935]">
-      <header className="border-b border-[#002d48] bg-[#003758] text-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
-            <Image
-              alt="Koskovi"
-              className="h-auto w-44"
-              height={62}
-              priority
-              src="/brand/Koskovi_logo_zaklad_white.svg"
-              width={369}
-            />
-            <h1 className="mt-5 text-3xl font-semibold">Sprava akci</h1>
-            <p className="mt-2 text-sm text-[#d7e6ed]">
-              Prehled, editace a mazani rezervaci ulozenych v databazi.
-            </p>
-          </div>
-          <div className="flex gap-3">
+    <SiteShell
+      actions={
+        <>
             <ThemeToggle />
             <Link
               className="inline-flex h-11 items-center justify-center rounded-md border border-white/20 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
               href="/"
             >
-              Zpet na kalendar
+              Zpět na kalendář
             </Link>
             {isAuthenticated ? (
               <button
@@ -243,27 +218,29 @@ export function AdminBookings() {
                 type="button"
               >
                 <LogOut size={17} />
-                Odhlasit
+                Odhlásit
               </button>
             ) : null}
-          </div>
-        </div>
-      </header>
-
-      <section className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[380px_1fr] lg:px-8">
+        </>
+      }
+      contentClassName="grid gap-6 px-5 py-6 lg:grid-cols-[380px_1fr] lg:px-8"
+      description="Přehled, editace a mazání rezervací uložených v databázi."
+      maxWidthClassName="max-w-7xl"
+      title="Správa akcí"
+    >
         {isLoading ? (
           <div className="rounded-lg border border-[#ded6c9] bg-white p-5">
-            Nacitam...
+            Načítám...
           </div>
         ) : !isAuthenticated ? (
           <form
             className="rounded-lg border border-[#ded6c9] bg-white p-5 lg:col-span-2 lg:max-w-md"
             onSubmit={handleLogin}
           >
-            <h2 className="text-xl font-semibold">Prihlaseni spravce</h2>
+            <h2 className="text-xl font-semibold">Přihlášení správce</h2>
             <div className="mt-5 grid gap-3">
               <label className="field-label">
-                Jmeno
+                Jméno
                 <input
                   className="field-input mt-1"
                   onChange={(event) => setUsername(event.target.value)}
@@ -288,7 +265,7 @@ export function AdminBookings() {
               type="submit"
             >
               <LogIn size={17} />
-              Prihlasit
+              Přihlásit
             </button>
           </form>
         ) : (
@@ -299,13 +276,13 @@ export function AdminBookings() {
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold">
-                  {editingId ? "Upravit akci" : "Nova akce"}
+                  {editingId ? "Upravit akci" : "Nová akce"}
                 </h2>
                 <CalendarPlus className="text-[#003758]" size={24} />
               </div>
               <div className="mt-5 grid gap-3">
                 <label className="field-label">
-                  Nazev
+                  Název
                   <input
                     className="field-input mt-1"
                     onChange={(event) =>
@@ -320,7 +297,7 @@ export function AdminBookings() {
                   />
                 </label>
                 <label className="field-label">
-                  Poradatel
+                  Pořadatel
                   <input
                     className="field-input mt-1"
                     onChange={(event) =>
@@ -396,7 +373,7 @@ export function AdminBookings() {
                   </label>
                 </div>
                 <label className="field-label">
-                  Poznamka
+                  Poznámka
                   <textarea
                     className="field-input mt-1 min-h-24 resize-none"
                     onChange={(event) =>
@@ -421,9 +398,9 @@ export function AdminBookings() {
                     type="checkbox"
                   />
                   <span>
-                    Sal po akci nebude uklizeny
+                    Sál po akci nebude uklizený
                     <span className="mt-1 block text-xs font-medium text-[#66706f]">
-                      Po konci akce zustane sal blokovany do potvrzeni uklidu.
+                      Po konci akce zůstane sál blokován do potvrzení úklidu.
                     </span>
                   </span>
                 </label>
@@ -439,7 +416,7 @@ export function AdminBookings() {
                   className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76]"
                   type="submit"
                 >
-                  Ulozit
+                  Uložit
                 </button>
                 {editingId ? (
                   <button
@@ -450,7 +427,7 @@ export function AdminBookings() {
                     }}
                     type="button"
                   >
-                    Zrusit
+                    Zrušit
                   </button>
                 ) : null}
               </div>
@@ -458,9 +435,9 @@ export function AdminBookings() {
 
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div className="border-b border-[#ded6c9] px-5 py-4">
-                <h2 className="text-xl font-semibold">Vsechny akce</h2>
+                <h2 className="text-xl font-semibold">Všechny akce</h2>
                 <p className="mt-1 text-sm text-[#66706f]">
-                  Tyto akce se propisuji do verejne dostupnosti.
+                  Tyto akce se propisuji do veřejné dostupnosti.
                 </p>
               </div>
               <div className="overflow-x-auto">
@@ -468,9 +445,9 @@ export function AdminBookings() {
                   <thead className="bg-[#f6f1e8] text-xs uppercase text-[#66706f]">
                     <tr>
                       <th className="px-4 py-3">Datum</th>
-                      <th className="px-4 py-3">Cas</th>
+                      <th className="px-4 py-3">Čas</th>
                       <th className="px-4 py-3">Akce</th>
-                      <th className="px-4 py-3">Pridal</th>
+                      <th className="px-4 py-3">Přidal</th>
                       <th className="px-4 py-3">Stav</th>
                       <th className="px-4 py-3 text-right">Akce</th>
                     </tr>
@@ -490,7 +467,7 @@ export function AdminBookings() {
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-semibold">
-                            {booking.createdBy ?? "neznamy"}
+                            {booking.createdBy ?? "neznámý"}
                           </p>
                           {booking.updatedBy ? (
                             <p className="text-xs text-[#66706f]">
@@ -506,7 +483,7 @@ export function AdminBookings() {
                             <span className="mt-1 block text-xs text-[#8c2f20]">
                               {booking.cleanedAt
                                 ? "Uklizeno"
-                                : "Ceka na uklid"}
+                                : "Čeká na úklid"}
                             </span>
                           ) : null}
                         </td>
@@ -540,9 +517,9 @@ export function AdminBookings() {
             {sessionUsername === "kosis" ? (
               <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:col-span-2">
                 <div className="border-b border-[#ded6c9] px-5 py-4">
-                  <h2 className="text-xl font-semibold">Log operaci</h2>
+                  <h2 className="text-xl font-semibold">Log operací</h2>
                   <p className="mt-1 text-sm text-[#66706f]">
-                    Poslednich 100 operaci. Soubor logu se automaticky drzi pod
+                    Posledních 100 operací. Soubor logu se automaticky drží pod
                     100 MB.
                   </p>
                 </div>
@@ -566,7 +543,7 @@ export function AdminBookings() {
                     ))
                   ) : (
                     <div className="px-5 py-4 text-sm text-[#66706f]">
-                      Zatim nejsou zaznamenane zadne operace.
+                      Zatím nejsou zaznamenané žádné operace.
                     </div>
                   )}
                 </div>
@@ -574,15 +551,14 @@ export function AdminBookings() {
             ) : null}
           </>
         )}
-      </section>
-    </main>
+    </SiteShell>
   );
 }
 
 function formatAuditAction(action: string) {
   const labels: Record<string, string> = {
-    "booking.clean": "potvrdil uklid",
-    "booking.create": "vytvoril akci",
+    "booking.clean": "potvrdil úklid",
+    "booking.create": "vytvořil akci",
     "booking.delete": "smazal akci",
     "booking.update": "upravil akci",
   };

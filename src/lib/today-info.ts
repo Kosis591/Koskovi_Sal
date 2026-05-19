@@ -50,7 +50,7 @@ export async function getTodayInfo(): Promise<TodayInfo> {
       isHoliday: Boolean(day.isHoliday),
       nameDay: day.name ?? null,
       source: "svatkyapi",
-      weekLabel: `${getIsoWeekNumber(dateKey)}. tyden`,
+      weekLabel: `${getIsoWeekNumber(dateKey)}. týden`,
     };
   } catch {
     return fallback;
@@ -70,7 +70,7 @@ function buildFallbackInfo(dateKey: string): TodayInfo {
     isHoliday: false,
     nameDay: null,
     source: "fallback",
-    weekLabel: `${getIsoWeekNumber(dateKey)}. tyden`,
+    weekLabel: `${getIsoWeekNumber(dateKey)}. týden`,
   };
 }
 

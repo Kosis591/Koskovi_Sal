@@ -8,11 +8,11 @@ export async function GET() {
   const username = getAdminRequestUsername(cookieStore);
 
   if (!isAdminRequest(cookieStore)) {
-    return NextResponse.json({ message: "Neprihlaseno." }, { status: 401 });
+    return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
   }
 
   if (username !== "kosis") {
-    return NextResponse.json({ message: "Nedostatecna opravneni." }, { status: 403 });
+    return NextResponse.json({ message: "Nedostatečná oprávnění." }, { status: 403 });
   }
 
   return NextResponse.json({ entries: await readAuditLog(100) });

@@ -25,8 +25,8 @@ const firma = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Koskovi | Dostupnost salu",
-  description: "Rezervacni kalendar Koskovi.",
+  title: "Koskovi | Dostupnost sálu",
+  description: "Rezervační kalendář Koškovi.",
 };
 
 export default function RootLayout({

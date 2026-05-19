@@ -76,8 +76,48 @@ textarea {
   z-index: 9999;
 }
 
+.calendar-view-transition {
+  animation: calendar-view-enter 360ms cubic-bezier(0.2, 0.82, 0.22, 1);
+  transform-origin: top center;
+  will-change: opacity, transform, filter;
+}
+
+@keyframes calendar-view-enter {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(14px) scale(0.985);
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
 [data-current-slot="true"] {
   z-index: 60 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-view-transition {
+    animation: calendar-view-enter-reduced 180ms ease-out;
+  }
+}
+
+@keyframes calendar-view-enter-reduced {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @media (min-width: 640px) {

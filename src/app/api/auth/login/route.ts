@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   if (!username || !password || !isAdminCredentials(username, password)) {
     return NextResponse.json(
-      { message: "Nespravne prihlasovaci udaje." },
+      { message: "Nesprávné přihlašovací údaje." },
       { status: 401 },
     );
   }

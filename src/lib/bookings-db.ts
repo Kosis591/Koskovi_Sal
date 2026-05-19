@@ -229,7 +229,7 @@ function createRecurringBookings() {
     if (day === 1) {
       pushRecurringBooking(bookings, cancelledIds, {
         id: `recurring-deti-${dateKey}`,
-        title: "Deti",
+        title: "Děti",
         organizer: "Koskovi",
         date: dateKey,
         start: "15:15",
@@ -279,7 +279,7 @@ function createRecurringBookings() {
 
       pushRecurringBooking(bookings, cancelledIds, {
         id: `recurring-spolecna-${dateKey}`,
-        title: `Spolecna ${danceStyle}`,
+        title: `Společná ${danceStyle}`,
         organizer: "Koskovi",
         date: dateKey,
         start: "18:00",

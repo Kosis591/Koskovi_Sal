@@ -33,7 +33,7 @@ export type BookingRequest = {
 
 export const hallSettings = {
   name: "Koskovi",
-  location: "Hlavni sal",
+  location: "Hlavní sál",
   slotMinutes: 30,
   openingHours: [
     { day: 1, label: "Pondeli", start: "10:30", end: "22:00" },
@@ -67,8 +67,8 @@ export const bookings: Booking[] = [
   },
   {
     id: "evt-4",
-    title: "Uklid a priprava salu",
-    organizer: "Sprava salu",
+    title: "Úklid a příprava sálu",
+    organizer: "Správa sálu",
     date: "2026-05-22",
     start: "08:00",
     end: "10:00",
