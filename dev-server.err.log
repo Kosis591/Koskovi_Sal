@@ -1,6 +1,11 @@
-(node:18984) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:33364) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
  ⨯ SyntaxError: Unexpected end of JSON input
     at JSON.parse (<anonymous>) {
   page: '/'
 }
+ ⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/'
+}
+^C^C
