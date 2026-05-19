@@ -144,13 +144,17 @@ export function BookingDashboard({
     () => getWeekDays(getWeekStartDate(todayDateKey)),
     [todayDateKey],
   );
-  const monthDays = useMemo(() => getMonthDays(selectedDate), [selectedDate]);
+  const selectedMonthKey = `${selectedDate.slice(0, 7)}-01`;
+  const monthDays = useMemo(
+    () => getMonthDays(selectedMonthKey),
+    [selectedMonthKey],
+  );
   const selectedBookings = useMemo(
     () => calendarBookings.filter((booking) => booking.date === selectedDate),
     [calendarBookings, selectedDate],
   );
   const visibleDateKeys = useMemo(() => {
-    const keys = new Set<string>([selectedDate, todayDateKey]);
+    const keys = new Set<string>([todayDateKey]);
 
     for (const day of days) {
       keys.add(formatDateKey(day));
@@ -161,7 +165,7 @@ export function BookingDashboard({
     }
 
     return [...keys];
-  }, [days, monthDays, selectedDate, todayDateKey]);
+  }, [days, monthDays, todayDateKey]);
   const bookingDayCounts = useMemo(() => {
     const counts = new Map<string, number>();
 
@@ -210,14 +214,15 @@ export function BookingDashboard({
     () => getDayAvailabilitySegments(selectedDate, calendarBookings),
     [selectedDate, calendarBookings],
   );
-  const freeSlots = timeSlots.filter(
-    (time) => {
+  const freeSlots = useMemo(
+    () => timeSlots.filter((time) => {
       const slotState = slotStateMap.get(getSlotStateKey(selectedDate, time));
 
       return Boolean(
         slotState?.isOpen && !slotState.booking && !slotState.cleanupBooking,
       );
-    },
+    }),
+    [selectedDate, slotStateMap, timeSlots],
   );
   const freeHours = freeSlots.length * (hallSettings.slotMinutes / 60);
   const todaysOpeningHours = useMemo(
@@ -256,7 +261,7 @@ export function BookingDashboard({
   }, []);
 
   useEffect(() => {
-    if (!now) {
+    if (!currentDateKey) {
       return;
     }
 
@@ -271,7 +276,7 @@ export function BookingDashboard({
       window.cancelAnimationFrame(animationFrame);
       window.clearTimeout(timeout);
     };
-  }, [currentDateKey, viewMode, now]);
+  }, [currentDateKey, viewMode]);
 
   async function syncCalendar() {
     setIsSyncing(true);
