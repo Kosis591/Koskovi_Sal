@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       details: {
         date: result.booking.date,
         end: result.booking.end,
+        booking: result.booking,
         start: result.booking.start,
         title: result.booking.title,
       },

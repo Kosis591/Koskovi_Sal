@@ -152,6 +152,28 @@ export async function updateBooking(id: string, input: BookingInput) {
   });
 }
 
+export async function restoreBookingSnapshot(snapshot: Booking) {
+  return withDatabaseLock(async () => {
+    const bookings = await readBookings();
+    const index = bookings.findIndex((booking) => booking.id === snapshot.id);
+    const conflict = findBookingConflict(bookings, snapshot, snapshot.id);
+
+    if (conflict) {
+      return { booking: null, conflict };
+    }
+
+    if (index === -1) {
+      await writeBookings([...bookings, snapshot]);
+      return { booking: snapshot, conflict: null };
+    }
+
+    bookings[index] = snapshot;
+    await writeBookings(bookings);
+
+    return { booking: snapshot, conflict: null };
+  });
+}
+
 export async function updateBookingTrainer(id: string, trainer: string) {
   return withDatabaseLock(async () => {
     const normalizedTrainer = trainer.trim();
@@ -230,7 +252,7 @@ export async function markBookingCleaned(id: string) {
     bookings[index] = updatedBooking;
     await writeBookings(bookings);
 
-    return { booking: updatedBooking, notFound: false };
+    return { booking: updatedBooking, notFound: false, previousBooking: booking };
   });
 }
 

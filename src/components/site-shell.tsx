@@ -53,14 +53,14 @@ export function SiteShell({
           width={71}
         />
         <div
-          className={`relative mx-auto flex ${maxWidthClassName} flex-col gap-8 px-5 py-8 lg:px-8`}
+          className={`relative mx-auto flex ${maxWidthClassName} flex-col gap-5 px-5 py-5 lg:px-6`}
         >
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <Image
                   alt="Koskovi"
-                  className="h-auto w-52"
+                  className="h-auto w-44"
                   height={62}
                   priority
                   src="/brand/Koskovi_logo_zaklad_white.svg"
@@ -74,11 +74,11 @@ export function SiteShell({
               </div>
               {eyebrow}
               <div>
-                <h1 className="text-4xl font-semibold tracking-normal text-white sm:text-5xl">
+                <h1 className="text-3xl font-semibold tracking-normal text-white sm:text-4xl">
                   {title}
                 </h1>
                 {description ? (
-                  <p className="mt-3 max-w-2xl text-base leading-7 text-[#d7e6ed]">
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[#d7e6ed]">
                     {description}
                   </p>
                 ) : null}

@@ -21,6 +21,8 @@ export async function POST(_request: NextRequest, context: RouteContext) {
       bookingId: result.booking.id,
       details: {
         date: result.booking.date,
+        booking: result.booking,
+        previousBooking: result.previousBooking,
         title: result.booking.title,
       },
     });

@@ -10,6 +10,7 @@ export type AuditAction =
   | "booking.clean"
   | "booking.create"
   | "booking.delete"
+  | "booking.undo"
   | "booking.update";
 
 export type AuditLogEntry = {

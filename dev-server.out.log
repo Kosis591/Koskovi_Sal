@@ -8,29 +8,40 @@
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1837ms
+ ✓ Ready in 1898ms
  ○ Compiling / ...
- ✓ Compiled / in 3.1s (755 modules)
- GET / 200 in 4276ms
- GET / 200 in 843ms
- GET / 200 in 839ms
- ✓ Compiled /api/auth/logout in 437ms (766 modules)
- POST /api/auth/logout 200 in 578ms
- ○ Compiling /_error ...
- ✓ Compiled /_error in 2.2s (1099 modules)
- GET / 500 in 2684ms
- GET / 500 in 2679ms
- GET / 200 in 172ms
- GET / 200 in 172ms
- GET / 200 in 64ms
- GET / 200 in 65ms
- GET / 200 in 64ms
- GET / 200 in 64ms
- GET / 200 in 2009ms
- GET / 200 in 2072ms
- ✓ Compiled /api/auth/login in 268ms (1101 modules)
- POST /api/auth/login 200 in 345ms
- ✓ Compiled /api/auth/session in 251ms (1103 modules)
- GET /api/auth/session 200 in 305ms
- POST /api/auth/logout 200 in 19ms
-Terminate batch job (Y/N)? 
+ ✓ Compiled / in 3.5s (755 modules)
+ GET / 200 in 5058ms
+ ✓ Compiled /admin in 437ms (760 modules)
+ GET /admin 200 in 600ms
+ ✓ Compiled /api/auth/session in 267ms (766 modules)
+ GET /api/auth/session 200 in 408ms
+ ✓ Compiled /api/bookings in 303ms (769 modules)
+ GET /api/auth/session 200 in 351ms
+ GET /api/bookings 200 in 366ms
+ GET /api/bookings 200 in 30ms
+ ✓ Compiled /api/audit-log in 202ms (771 modules)
+ GET /api/audit-log 200 in 222ms
+ GET /api/audit-log 200 in 253ms
+ ✓ Compiled /api/recurring-trainers in 180ms (773 modules)
+ GET /api/recurring-trainers 200 in 231ms
+ GET /api/recurring-trainers 200 in 237ms
+ GET / 200 in 1156ms
+ ✓ Compiled /favicon.ico in 224ms (489 modules)
+ GET /favicon.ico 200 in 262ms
+ ✓ Compiled /api/auth/login in 293ms (777 modules)
+ POST /api/auth/login 200 in 341ms
+ GET /api/auth/session 200 in 24ms
+ GET /admin 200 in 62ms
+ GET /api/auth/session 200 in 21ms
+ GET /api/auth/session 200 in 16ms
+ GET /api/bookings 200 in 41ms
+ GET /api/auth/session 200 in 42ms
+ GET /api/bookings 200 in 61ms
+ GET /api/audit-log 200 in 43ms
+ GET /api/bookings 200 in 47ms
+ GET /api/audit-log 200 in 42ms
+ GET /api/recurring-trainers 200 in 28ms
+ GET /api/audit-log 200 in 35ms
+ GET /api/recurring-trainers 200 in 35ms
+ GET /api/recurring-trainers 200 in 17ms

@@ -20,7 +20,9 @@ type AuditLogEntry = {
   actor: string;
   bookingId?: string;
   details?: {
+    booking?: Booking;
     date?: string;
+    previousBooking?: Booking;
     title?: string;
   };
   timestamp: string;
@@ -75,6 +77,7 @@ export function AdminBookings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingRecurringTrainers, setIsSavingRecurringTrainers] =
     useState(false);
+  const [undoingTimestamp, setUndoingTimestamp] = useState("");
   const [message, setMessage] = useState("");
   const [recurringTrainerMessage, setRecurringTrainerMessage] = useState("");
 
@@ -258,6 +261,32 @@ export function AdminBookings() {
     await loadBookings();
   }
 
+  async function handleUndoAuditEntry(entry: AuditLogEntry) {
+    setUndoingTimestamp(entry.timestamp);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/audit-log/undo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timestamp: entry.timestamp }),
+      });
+
+      const data = (await response.json()) as { message?: string };
+
+      if (!response.ok) {
+        setMessage(data.message ?? "Operaci se nepodařilo vrátit.");
+        return;
+      }
+
+      setMessage(data.message ?? "Operace byla vrácena.");
+      await loadBookings();
+      await loadAuditLog();
+    } finally {
+      setUndoingTimestamp("");
+    }
+  }
+
   function editBooking(booking: Booking) {
     setEditingId(booking.id);
     setForm({
@@ -298,7 +327,7 @@ export function AdminBookings() {
       }
       contentClassName="grid gap-6 px-5 py-6 lg:grid-cols-[380px_1fr] lg:px-8"
       description="Přehled, editace a mazání rezervací uložených v databázi."
-      maxWidthClassName="max-w-7xl"
+      maxWidthClassName="max-w-[1840px]"
       title="Správa akcí"
     >
         {isLoading ? (
@@ -589,7 +618,7 @@ export function AdminBookings() {
               </button>
             </form>
 
-            <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
+            <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:col-span-2">
               <div className="border-b border-[#ded6c9] px-5 py-4">
                 <h2 className="text-xl font-semibold">Všechny akce</h2>
                 <p className="mt-1 text-sm text-[#66706f]">
@@ -688,7 +717,7 @@ export function AdminBookings() {
                   {auditLog.length > 0 ? (
                     auditLog.map((entry) => (
                       <div
-                        className="grid gap-2 px-5 py-3 text-sm md:grid-cols-[170px_120px_1fr]"
+                        className="grid gap-2 px-5 py-3 text-sm md:grid-cols-[170px_120px_1fr_auto] md:items-center"
                         key={`${entry.timestamp}-${entry.action}-${entry.bookingId}`}
                       >
                         <span className="text-[#66706f]">
@@ -700,6 +729,22 @@ export function AdminBookings() {
                           {entry.details?.title ? `: ${entry.details.title}` : ""}
                           {entry.details?.date ? ` (${entry.details.date})` : ""}
                         </span>
+                        {canUndoAuditEntry(entry) ? (
+                          <button
+                            className="inline-flex h-9 items-center justify-center rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8] disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={undoingTimestamp === entry.timestamp}
+                            onClick={() => handleUndoAuditEntry(entry)}
+                            type="button"
+                          >
+                            {undoingTimestamp === entry.timestamp
+                              ? "Vracím..."
+                              : "Vrátit"}
+                          </button>
+                        ) : (
+                          <span className="hidden text-xs text-[#9a9288] md:block">
+                            -
+                          </span>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -721,8 +766,25 @@ function formatAuditAction(action: string) {
     "booking.clean": "potvrdil úklid",
     "booking.create": "vytvořil akci",
     "booking.delete": "smazal akci",
+    "booking.undo": "vrátil operaci",
     "booking.update": "upravil akci",
   };
 
   return labels[action] ?? action;
+}
+
+function canUndoAuditEntry(entry: AuditLogEntry) {
+  if (entry.action === "booking.create") {
+    return Boolean(entry.bookingId);
+  }
+
+  if (entry.action === "booking.delete") {
+    return Boolean(entry.details?.booking);
+  }
+
+  if (entry.action === "booking.update" || entry.action === "booking.clean") {
+    return Boolean(entry.details?.previousBooking);
+  }
+
+  return false;
 }

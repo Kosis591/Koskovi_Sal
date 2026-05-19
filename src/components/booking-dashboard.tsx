@@ -458,9 +458,9 @@ export function BookingDashboard({
   return (
     <SiteShell
       maxWidthClassName="max-w-[1840px]"
-      contentClassName={`grid gap-6 px-5 py-6 lg:grid-cols-[minmax(1120px,1fr)_360px] lg:pl-8 lg:pr-6 xl:grid-cols-[minmax(1180px,1fr)_360px] xl:pl-12 xl:pr-8 ${
+      contentClassName={`grid gap-5 px-4 py-5 lg:grid-cols-[minmax(1000px,1fr)_330px] lg:pl-8 lg:pr-4 xl:grid-cols-[minmax(1040px,1fr)_340px] xl:pl-10 xl:pr-5 ${
         isAuthenticated
-          ? "2xl:grid-cols-[minmax(1180px,1fr)_minmax(680px,760px)] 2xl:pl-16"
+          ? "2xl:grid-cols-[minmax(1040px,1fr)_minmax(600px,680px)] 2xl:pl-12"
           : ""
       }`}
       description={
@@ -632,7 +632,7 @@ export function BookingDashboard({
           {viewMode === "today" ? (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
-                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-auto overscroll-contain"
+                className="max-h-[min(620px,calc(100svh-230px))] max-w-full overflow-auto overscroll-contain"
                 ref={calendarScrollerRef}
               >
                 <div className="min-w-[420px]">
@@ -759,14 +759,14 @@ export function BookingDashboard({
               </div>
             </div>
           ) : viewMode === "week" ? (
-            <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:min-w-[1120px] xl:min-w-[1180px]">
+            <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:min-w-[1000px] xl:min-w-[1040px]">
               <div
-                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-y-auto overflow-x-hidden overscroll-contain"
+                className="max-h-[min(620px,calc(100svh-230px))] max-w-full overflow-y-auto overflow-x-hidden overscroll-contain"
                 ref={calendarScrollerRef}
               >
                 <div className="min-w-full">
-                  <div className="sticky top-0 z-20 grid grid-cols-[88px_repeat(7,minmax(144px,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[92px_repeat(7,minmax(152px,1fr))]">
-                    <div className="sticky left-0 z-30 bg-[#f6f1e8] px-3 py-3 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
+                  <div className="sticky top-0 z-20 grid grid-cols-[76px_repeat(7,minmax(132px,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[78px_repeat(7,minmax(136px,1fr))]">
+                    <div className="sticky left-0 z-30 bg-[#f6f1e8] px-3 py-2.5 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
                       Cas
                     </div>
                     {days.map((day) => {
@@ -774,7 +774,7 @@ export function BookingDashboard({
                       const isSelected = key === selectedDate;
                       return (
                         <button
-                          className={`border-l px-3 py-3 text-left transition ${
+                          className={`border-l px-3 py-2.5 text-left transition ${
                             isSelected
                               ? "selected-period-head relative z-20 border-[#0b4d76] bg-[#0b4d76] text-white ring-1 ring-white/50 shadow-[0_14px_26px_rgba(0,55,88,0.30),inset_0_-5px_0_#8fd7ac]"
                               : "border-[#ded6c9] hover:bg-[#fbf8f1]"
@@ -803,10 +803,10 @@ export function BookingDashboard({
 
                   {timeSlots.map((time) => (
                     <div
-                      className="grid grid-cols-[88px_repeat(7,minmax(144px,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[92px_repeat(7,minmax(152px,1fr))]"
+                      className="grid grid-cols-[76px_repeat(7,minmax(132px,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[78px_repeat(7,minmax(136px,1fr))]"
                       key={time}
                     >
-                      <div className="sticky left-0 z-10 bg-[#fcfaf6] px-3 py-3 text-sm font-medium text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.06)]">
+                      <div className="sticky left-0 z-10 bg-[#fcfaf6] px-2.5 py-2 text-sm font-medium text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.06)]">
                         {time}
                       </div>
                       {days.map((day) => {
@@ -825,7 +825,7 @@ export function BookingDashboard({
                             : null;
                         return (
                           <button
-                            className={`relative min-h-14 border-l border-[#ece3d5] px-2 py-2 text-left text-xs transition ${
+                            className={`relative min-h-12 border-l border-[#ece3d5] px-2 py-1.5 text-left text-xs transition ${
                               !isOpen
                                 ? isSelected
                                   ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
@@ -923,7 +923,7 @@ export function BookingDashboard({
           ) : (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
-                className="max-h-[min(680px,calc(100svh-180px))] max-w-full overflow-auto overscroll-contain"
+                className="max-h-[min(620px,calc(100svh-230px))] max-w-full overflow-auto overscroll-contain"
                 ref={calendarScrollerRef}
               >
                 <div className="min-w-[1720px]">
@@ -1100,7 +1100,7 @@ export function BookingDashboard({
           </div>
         </div>
 
-        <aside className={`flex flex-col gap-6 ${
+        <aside className={`flex flex-col gap-5 lg:max-h-[min(620px,calc(100svh-230px))] lg:overflow-y-auto lg:pr-1 ${
           isAuthenticated ? "2xl:grid 2xl:grid-cols-2 2xl:items-start" : ""
         }`}>
           <div className={`rounded-lg border border-[#ded6c9] bg-white p-5 ${
@@ -1345,7 +1345,6 @@ export function BookingDashboard({
                       }
                       pattern="^(\+?\d{1,3}\s*)?(\d[\s-]*){9}$"
                       placeholder="+420 777 777 777"
-                      required
                       title="Zadej telefon ve tvaru +420 777 777 777 nebo 777 777 777"
                       type="tel"
                       value={request.phone}

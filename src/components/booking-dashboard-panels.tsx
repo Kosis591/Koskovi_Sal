@@ -17,7 +17,7 @@ export function RecurringCancellationPanel({
 }) {
   if (cancellations.length === 0) {
     return (
-      <div className="flex h-full min-h-24 items-center rounded-md border border-white/10 bg-white/10 px-4 py-3 text-sm text-[#d7e6ed]">
+      <div className="flex h-full min-h-16 items-center rounded-md border border-white/10 bg-white/10 px-4 py-3 text-sm text-[#d7e6ed]">
         Žádný pravidelný trénink není aktuálně zrušený.
       </div>
     );

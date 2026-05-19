@@ -23,6 +23,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
   const input = (await request.json()) as BookingInput;
+  const previousBooking = (await getBookings()).find((booking) => booking.id === id);
 
   if (!input.title || !input.date || !input.start || !input.end) {
     return NextResponse.json(
@@ -58,6 +59,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       details: {
         date: result.booking.date,
         end: result.booking.end,
+        booking: result.booking,
+        previousBooking,
         start: result.booking.start,
         title: result.booking.title,
       },
@@ -91,6 +94,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       ? {
           date: existingBooking.date,
           end: existingBooking.end,
+          booking: existingBooking,
           start: existingBooking.start,
           title: existingBooking.title,
         }
