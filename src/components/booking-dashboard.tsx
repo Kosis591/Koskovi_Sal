@@ -68,6 +68,17 @@ const statusLabels = {
 const cleanupCellStyle =
   "border-[#e1b554] bg-[#fff6d8] text-[#6a4b00]";
 
+const slotFillStyles = {
+  cleanup: "bg-[#f0c96b]/45",
+  confirmed: "bg-[#fff0eb]",
+  maintenance: "bg-[#f1f3f5]",
+};
+
+const partialAvailableCellStyle = "bg-white";
+const selectedPartialAvailableCellStyle = "selected-period-cell bg-[#eef7fb]";
+
+const trainerOptions = ["Barca", "Jirka", "Marek", "Sarka", "Kamca", "Externi"];
+
 const initialRequest: BookingRequest = {
   name: "",
   email: "",
@@ -76,6 +87,7 @@ const initialRequest: BookingRequest = {
   start: "16:00",
   end: "18:00",
   eventType: "tanecni-lekce",
+  trainer: "",
   note: "",
   cleanupRequired: false,
 };
@@ -682,6 +694,7 @@ export function BookingDashboard({
                       todayDateKey,
                       time,
                     );
+                    const slotFill = getSlotFill(time, booking, cleanupBooking);
                     const currentTimeOffset =
                       currentTimeMinutes !== null
                         ? getCurrentTimeOffset(todayDate, time, currentTimeMinutes)
@@ -700,9 +713,9 @@ export function BookingDashboard({
                             !isOpen
                               ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                               : booking
-                                ? `${statusStyles[booking.status]} selected-period-booked relative z-10 ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
+                                ? `${getBookingCellStyle(booking, slotFill, true)} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                 : cleanupBooking
-                                  ? `${cleanupCellStyle} selected-period-booked relative z-10 ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]`
+                                  ? `${cleanupCellStyle} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]`
                                   : "selected-period-cell relative z-10 bg-[#eef7fb] text-[#17475f] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.78),inset_0_-3px_0_rgba(11,77,118,0.14)] hover:bg-[#e5f2f8]"
                           }`}
                           data-current-slot={
@@ -724,6 +737,16 @@ export function BookingDashboard({
                           }
                           type="button"
                         >
+                          {slotFill ? (
+                            <span
+                              aria-hidden="true"
+                              className={`pointer-events-none absolute bottom-0 top-0 z-0 ${slotFill.className}`}
+                              style={{
+                                left: `${slotFill.left}%`,
+                                width: `${slotFill.width}%`,
+                              }}
+                            />
+                          ) : null}
                           {currentTimeOffset !== null ? (
                             <span
                               aria-hidden="true"
@@ -737,7 +760,7 @@ export function BookingDashboard({
                           {!isOpen ? (
                             <span className="block font-medium">Zavřeno</span>
                           ) : booking ? (
-                            <span className="block max-w-full overflow-hidden">
+                            <span className="relative z-10 block max-w-full overflow-hidden">
                               <span className="block truncate font-semibold">
                                 {statusLabels[booking.status]}
                               </span>
@@ -746,7 +769,7 @@ export function BookingDashboard({
                               </span>
                             </span>
                           ) : cleanupBooking ? (
-                            <span className="block max-w-full overflow-hidden">
+                            <span className="relative z-10 block max-w-full overflow-hidden">
                               <span className="block truncate font-semibold">
                                 Ceka na uklid
                               </span>
@@ -755,7 +778,7 @@ export function BookingDashboard({
                               </span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf7ef] px-2 py-1 font-medium text-[#246043]">
+                            <span className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#edf7ef] px-2 py-1 font-medium text-[#246043]">
                               <Check size={13} />
                               Volno
                             </span>
@@ -823,6 +846,11 @@ export function BookingDashboard({
                         const isSelected = dateKey === selectedDate;
                         const { booking, cleanupBooking, isOpen } =
                           getSlotState(dateKey, time);
+                        const slotFill = getSlotFill(
+                          time,
+                          booking,
+                          cleanupBooking,
+                        );
                         const currentTimeOffset =
                           dateKey === currentDateKey && currentTimeMinutes !== null
                             ? getCurrentTimeOffset(day, time, currentTimeMinutes)
@@ -835,15 +863,15 @@ export function BookingDashboard({
                                   ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                                   : "bg-[#f3f0ea] text-[#9a9288]"
                                   : booking
-                                    ? `${statusStyles[booking.status]} ${
+                                    ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                         isSelected
-                                          ? "selected-period-booked relative z-10 ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]"
+                                          ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                                           : ""
                                       }`
                                     : cleanupBooking
                                       ? `${cleanupCellStyle} ${
                                           isSelected
-                                            ? "selected-period-booked relative z-10 ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
+                                            ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
                                             : ""
                                         }`
                                   : isSelected
@@ -870,6 +898,16 @@ export function BookingDashboard({
                             }
                             type="button"
                           >
+                            {slotFill ? (
+                              <span
+                                aria-hidden="true"
+                                className={`pointer-events-none absolute bottom-0 top-0 z-0 ${slotFill.className}`}
+                                style={{
+                                  left: `${slotFill.left}%`,
+                                  width: `${slotFill.width}%`,
+                                }}
+                              />
+                            ) : null}
                             {currentTimeOffset !== null ? (
                               <span
                                 aria-hidden="true"
@@ -883,7 +921,7 @@ export function BookingDashboard({
                             {!isOpen ? (
                               <span className="block font-medium">Zavreno</span>
                             ) : booking ? (
-                              <span className="block max-w-full overflow-hidden">
+                              <span className="relative z-10 block max-w-full overflow-hidden">
                                 <span className="block truncate font-semibold">
                                   {statusLabels[booking.status]}
                                 </span>
@@ -892,7 +930,7 @@ export function BookingDashboard({
                                 </span>
                               </span>
                             ) : cleanupBooking ? (
-                              <span className="block max-w-full overflow-hidden">
+                              <span className="relative z-10 block max-w-full overflow-hidden">
                                 <span className="block truncate font-semibold">
                                   Ceka na uklid
                                 </span>
@@ -901,7 +939,7 @@ export function BookingDashboard({
                                 </span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf7ef] px-2 py-1 font-medium text-[#246043]">
+                              <span className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#edf7ef] px-2 py-1 font-medium text-[#246043]">
                                 <Check size={13} />
                                 Volno
                               </span>
@@ -980,6 +1018,11 @@ export function BookingDashboard({
                         {timeSlots.map((time) => {
                           const { booking, cleanupBooking, isOpen } =
                             getSlotState(dateKey, time);
+                          const slotFill = getSlotFill(
+                            time,
+                            booking,
+                            cleanupBooking,
+                          );
                           const currentTimeOffset =
                             dateKey === currentDateKey &&
                             currentTimeMinutes !== null
@@ -994,15 +1037,15 @@ export function BookingDashboard({
                                     ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                                     : "bg-[#f3f0ea] text-[#9a9288]"
                                     : booking
-                                      ? `${statusStyles[booking.status]} ${
+                                      ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                           isSelected
-                                            ? "selected-period-booked relative z-10 ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]"
+                                            ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                                             : ""
                                         }`
                                       : cleanupBooking
                                         ? `${cleanupCellStyle} ${
                                             isSelected
-                                              ? "selected-period-booked relative z-10 ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
+                                              ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
                                               : ""
                                           }`
                                     : isSelected
@@ -1029,6 +1072,16 @@ export function BookingDashboard({
                               }
                               type="button"
                             >
+                              {slotFill ? (
+                                <span
+                                  aria-hidden="true"
+                                  className={`pointer-events-none absolute bottom-0 top-0 z-0 ${slotFill.className}`}
+                                  style={{
+                                    left: `${slotFill.left}%`,
+                                    width: `${slotFill.width}%`,
+                                  }}
+                                />
+                              ) : null}
                               {currentTimeOffset !== null ? (
                                 <span
                                   aria-hidden="true"
@@ -1044,7 +1097,7 @@ export function BookingDashboard({
                                   Zavreno
                                 </span>
                               ) : booking ? (
-                                <span className="block max-w-full overflow-hidden">
+                                <span className="relative z-10 block max-w-full overflow-hidden">
                                   <span className="block truncate font-semibold">
                                     {booking.title}
                                   </span>
@@ -1053,7 +1106,7 @@ export function BookingDashboard({
                                   </span>
                                 </span>
                               ) : cleanupBooking ? (
-                                <span className="block max-w-full overflow-hidden">
+                                <span className="relative z-10 block max-w-full overflow-hidden">
                                   <span className="block truncate font-semibold">
                                     Ceka na uklid
                                   </span>
@@ -1062,7 +1115,7 @@ export function BookingDashboard({
                                   </span>
                                 </span>
                               ) : (
-                                <span className="block truncate font-medium text-[#246043]">
+                                <span className="relative z-10 block truncate font-medium text-[#246043]">
                                   Volno
                                 </span>
                               )}
@@ -1296,8 +1349,8 @@ export function BookingDashboard({
                     />
                   </Field>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <label className="field-label col-span-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="field-label col-span-2">
                       Datum
                       <input
                         className="field-input mt-1"
@@ -1333,7 +1386,7 @@ export function BookingDashboard({
                         value={request.end}
                       />
                     </label>
-                    <label className="field-label">
+                    <label className="field-label col-span-2">
                       Typ
                       <select
                         className="field-input mt-1"
@@ -1349,6 +1402,25 @@ export function BookingDashboard({
                         <option value="blokace">Blokace</option>
                       </select>
                     </label>
+                    {request.eventType === "tanecni-lekce" ? (
+                      <label className="field-label col-span-2">
+                        Trener
+                        <select
+                          className="field-input mt-1"
+                          onChange={(event) =>
+                            updateRequest("trainer", event.target.value)
+                          }
+                          value={request.trainer}
+                        >
+                          <option value="">Bez vybraneho trenera</option>
+                          {trainerOptions.map((trainer) => (
+                            <option key={trainer} value={trainer}>
+                              {trainer}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
                   </div>
 
                   <label className="field-label">
@@ -1596,9 +1668,9 @@ function getDayAvailabilitySegments(
       ? {
           bookingId: booking.id,
           description: booking.organizer,
-          end: slotEnd,
+          end: minTime(booking.end, slotEnd),
           kind: "booked",
-          start: slot,
+          start: maxTime(booking.start, slot),
           status: booking.status,
           title: booking.title,
         }
@@ -1652,6 +1724,21 @@ function getSegmentStyle(segment: DayAvailabilitySegment) {
   return statusStyles[segment.status];
 }
 
+function getBookingCellStyle(
+  booking: Booking,
+  slotFill: ReturnType<typeof getSlotFill>,
+  isSelected: boolean,
+) {
+  const textStyle =
+    booking.status === "confirmed" ? "text-[#8c2f20]" : "text-[#3d4650]";
+
+  return slotFill && slotFill.width < 100
+    ? `${
+        isSelected ? selectedPartialAvailableCellStyle : partialAvailableCellStyle
+      } ${textStyle}`
+    : statusStyles[booking.status];
+}
+
 function canMergeSegments(
   previousSegment: DayAvailabilitySegment | undefined,
   nextSegment: DayAvailabilitySegment,
@@ -1696,9 +1783,14 @@ function getCurrentTimeOffset(
 
   const start = timeToMinutes(slotStart);
   const end = start + hallSettings.slotMinutes;
+  const dayStart = timeToMinutes(openingHours.start);
   const dayEnd = timeToMinutes(openingHours.end);
 
   if (currentMinutes < start || currentMinutes >= end) {
+    if (currentMinutes < dayStart && start <= dayStart && end > dayStart) {
+      return 0;
+    }
+
     if (currentMinutes >= dayEnd && start < dayEnd && end >= dayEnd) {
       return 100;
     }
@@ -1707,6 +1799,43 @@ function getCurrentTimeOffset(
   }
 
   return ((currentMinutes - start) / hallSettings.slotMinutes) * 100;
+}
+
+function getSlotFill(
+  slotStart: string,
+  booking?: Booking,
+  cleanupBooking?: Booking,
+) {
+  const source = booking ?? cleanupBooking;
+
+  if (!source) {
+    return null;
+  }
+
+  const slotStartMinutes = timeToMinutes(slotStart);
+  const slotEndMinutes = slotStartMinutes + hallSettings.slotMinutes;
+  const sourceStart = booking
+    ? timeToMinutes(booking.start)
+    : slotStartMinutes;
+  const sourceEnd = booking
+    ? timeToMinutes(booking.end)
+    : slotEndMinutes;
+  const overlapStart = Math.max(slotStartMinutes, sourceStart);
+  const overlapEnd = Math.min(slotEndMinutes, sourceEnd);
+  const width =
+    ((overlapEnd - overlapStart) / hallSettings.slotMinutes) * 100;
+
+  if (width <= 0) {
+    return null;
+  }
+
+  return {
+    className: booking
+      ? slotFillStyles[booking.status]
+      : slotFillStyles.cleanup,
+    left: ((overlapStart - slotStartMinutes) / hallSettings.slotMinutes) * 100,
+    width,
+  };
 }
 
 function getOccupancyNotice(
@@ -1817,6 +1946,10 @@ function addMinutes(time: string, minutes: number) {
 
 function minTime(left: string, right: string) {
   return timeToMinutes(left) <= timeToMinutes(right) ? left : right;
+}
+
+function maxTime(left: string, right: string) {
+  return timeToMinutes(left) >= timeToMinutes(right) ? left : right;
 }
 
 function normalizeText(value: string) {

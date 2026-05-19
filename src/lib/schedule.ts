@@ -26,6 +26,7 @@ export type BookingRequest = {
   start: string;
   end: string;
   eventType: string;
+  trainer?: string;
   note: string;
   cleanupRequired?: boolean;
 };
@@ -130,11 +131,17 @@ export function formatDateKey(date: Date) {
 }
 
 export function isSlotBooked(bookingList: Booking[], date: string, time: string) {
+  const slotStart = timeToMinutes(time);
+  const slotEnd = slotStart + hallSettings.slotMinutes;
+
   return bookingList.find((booking) => {
+    const bookingStart = timeToMinutes(booking.start);
+    const bookingEnd = timeToMinutes(booking.end);
+
     return (
       booking.date === date &&
-      booking.start <= time &&
-      booking.end > time
+      bookingStart < slotEnd &&
+      bookingEnd > slotStart
     );
   });
 }

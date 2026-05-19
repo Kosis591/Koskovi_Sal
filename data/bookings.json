@@ -1,5 +1,15 @@
 [
   {
+    "id": "recurring-juniori-utery-2026-05-19",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-05-19",
+    "start": "16:30",
+    "end": "17:15",
+    "status": "confirmed",
+    "note": "Pravidelny uterni trenink junioru"
+  },
+  {
     "id": "recurring-practise-2026-05-19",
     "title": "Practise",
     "organizer": "Koskovi",
@@ -28,6 +38,36 @@
     "end": "19:30",
     "status": "confirmed",
     "note": "LAT a STT se stridaji po tydnu"
+  },
+  {
+    "id": "recurring-juniori-patek-2026-05-22",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-05-22",
+    "start": "16:00",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny patecni trenink junioru"
+  },
+  {
+    "id": "recurring-deti-2026-05-25",
+    "title": "Deti",
+    "organizer": "Koskovi",
+    "date": "2026-05-25",
+    "start": "15:15",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny pondelni trenink deti"
+  },
+  {
+    "id": "recurring-juniori-utery-2026-05-26",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-05-26",
+    "start": "16:30",
+    "end": "17:15",
+    "status": "confirmed",
+    "note": "Pravidelny uterni trenink junioru"
   },
   {
     "id": "recurring-practise-2026-05-26",
@@ -60,6 +100,36 @@
     "note": "LAT a STT se stridaji po tydnu"
   },
   {
+    "id": "recurring-juniori-patek-2026-05-29",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-05-29",
+    "start": "16:00",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny patecni trenink junioru"
+  },
+  {
+    "id": "recurring-deti-2026-06-01",
+    "title": "Deti",
+    "organizer": "Koskovi",
+    "date": "2026-06-01",
+    "start": "15:15",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny pondelni trenink deti"
+  },
+  {
+    "id": "recurring-juniori-utery-2026-06-02",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-06-02",
+    "start": "16:30",
+    "end": "17:15",
+    "status": "confirmed",
+    "note": "Pravidelny uterni trenink junioru"
+  },
+  {
     "id": "recurring-practise-2026-06-02",
     "title": "Practise",
     "organizer": "Koskovi",
@@ -90,6 +160,36 @@
     "note": "LAT a STT se stridaji po tydnu"
   },
   {
+    "id": "recurring-juniori-patek-2026-06-05",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-06-05",
+    "start": "16:00",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny patecni trenink junioru"
+  },
+  {
+    "id": "recurring-deti-2026-06-08",
+    "title": "Deti",
+    "organizer": "Koskovi",
+    "date": "2026-06-08",
+    "start": "15:15",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny pondelni trenink deti"
+  },
+  {
+    "id": "recurring-juniori-utery-2026-06-09",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-06-09",
+    "start": "16:30",
+    "end": "17:15",
+    "status": "confirmed",
+    "note": "Pravidelny uterni trenink junioru"
+  },
+  {
     "id": "recurring-practise-2026-06-09",
     "title": "Practise",
     "organizer": "Koskovi",
@@ -118,5 +218,45 @@
     "end": "19:30",
     "status": "confirmed",
     "note": "LAT a STT se stridaji po tydnu"
+  },
+  {
+    "id": "recurring-juniori-patek-2026-06-12",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-06-12",
+    "start": "16:00",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny patecni trenink junioru"
+  },
+  {
+    "id": "recurring-deti-2026-06-15",
+    "title": "Deti",
+    "organizer": "Koskovi",
+    "date": "2026-06-15",
+    "start": "15:15",
+    "end": "17:00",
+    "status": "confirmed",
+    "note": "Pravidelny pondelni trenink deti"
+  },
+  {
+    "id": "recurring-juniori-utery-2026-06-16",
+    "title": "Juniori",
+    "organizer": "Koskovi",
+    "date": "2026-06-16",
+    "start": "16:30",
+    "end": "17:15",
+    "status": "confirmed",
+    "note": "Pravidelny uterni trenink junioru"
+  },
+  {
+    "id": "recurring-practise-2026-06-16",
+    "title": "Practise",
+    "organizer": "Koskovi",
+    "date": "2026-06-16",
+    "start": "17:30",
+    "end": "19:30",
+    "status": "confirmed",
+    "note": "Pravidelna uterni akce"
   }
 ]

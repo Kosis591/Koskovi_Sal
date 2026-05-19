@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     note: [
       `Telefon: ${payload.phone}`,
       payload.email ? `E-mail: ${payload.email}` : null,
+      payload.trainer ? `Trener: ${payload.trainer}` : null,
       payload.note,
     ]
       .filter(Boolean)

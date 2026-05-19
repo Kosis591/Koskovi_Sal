@@ -226,8 +226,32 @@ function createRecurringBookings() {
     const day = date.getUTCDay();
     const dateKey = formatUtcDateKey(date);
 
+    if (day === 1) {
+      pushRecurringBooking(bookings, cancelledIds, {
+        id: `recurring-deti-${dateKey}`,
+        title: "Deti",
+        organizer: "Koskovi",
+        date: dateKey,
+        start: "15:15",
+        end: "17:00",
+        status: "confirmed",
+        note: "Pravidelny pondelni trenink deti",
+      });
+    }
+
     if (day === 2) {
-      const booking = {
+      pushRecurringBooking(bookings, cancelledIds, {
+        id: `recurring-juniori-utery-${dateKey}`,
+        title: "Juniori",
+        organizer: "Koskovi",
+        date: dateKey,
+        start: "16:30",
+        end: "17:15",
+        status: "confirmed",
+        note: "Pravidelny uterni trenink junioru",
+      });
+
+      pushRecurringBooking(bookings, cancelledIds, {
         id: `recurring-practise-${dateKey}`,
         title: "Practise",
         organizer: "Koskovi",
@@ -236,48 +260,60 @@ function createRecurringBookings() {
         end: "19:30",
         status: "confirmed",
         note: "Pravidelna uterni akce",
-      } satisfies Booking;
-
-      if (!cancelledIds.has(booking.id)) {
-        bookings.push(booking);
-      }
+      });
     }
 
     if (day === 4) {
       const danceStyle = getAlternatingDanceStyle(dateKey);
 
-      const pohybovka = {
-          id: `recurring-pohybovka-${dateKey}`,
-          title: "Pohybovka",
-          organizer: "Koskovi",
-          date: dateKey,
-          start: "17:15",
-          end: "18:00",
-          status: "confirmed",
-          note: "Pravidelna ctvrtecni akce",
-      } satisfies Booking;
-      const spolecna = {
-          id: `recurring-spolecna-${dateKey}`,
-          title: `Spolecna ${danceStyle}`,
-          organizer: "Koskovi",
-          date: dateKey,
-          start: "18:00",
-          end: "19:30",
-          status: "confirmed",
-          note: "LAT a STT se stridaji po tydnu",
-      } satisfies Booking;
+      pushRecurringBooking(bookings, cancelledIds, {
+        id: `recurring-pohybovka-${dateKey}`,
+        title: "Pohybovka",
+        organizer: "Koskovi",
+        date: dateKey,
+        start: "17:15",
+        end: "18:00",
+        status: "confirmed",
+        note: "Pravidelna ctvrtecni akce",
+      });
 
-      if (!cancelledIds.has(pohybovka.id)) {
-        bookings.push(pohybovka);
-      }
+      pushRecurringBooking(bookings, cancelledIds, {
+        id: `recurring-spolecna-${dateKey}`,
+        title: `Spolecna ${danceStyle}`,
+        organizer: "Koskovi",
+        date: dateKey,
+        start: "18:00",
+        end: "19:30",
+        status: "confirmed",
+        note: "LAT a STT se stridaji po tydnu",
+      });
+    }
 
-      if (!cancelledIds.has(spolecna.id)) {
-        bookings.push(spolecna);
-      }
+    if (day === 5) {
+      pushRecurringBooking(bookings, cancelledIds, {
+        id: `recurring-juniori-patek-${dateKey}`,
+        title: "Juniori",
+        organizer: "Koskovi",
+        date: dateKey,
+        start: "16:00",
+        end: "17:00",
+        status: "confirmed",
+        note: "Pravidelny patecni trenink junioru",
+      });
     }
   }
 
   return bookings;
+}
+
+function pushRecurringBooking(
+  bookings: Booking[],
+  cancelledIds: Set<string>,
+  booking: Booking,
+) {
+  if (!cancelledIds.has(booking.id)) {
+    bookings.push(booking);
+  }
 }
 
 async function readRecurringCancellations() {
