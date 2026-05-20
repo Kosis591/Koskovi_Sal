@@ -42,3 +42,5 @@ next-env.d.ts
 data/audit-log.jsonl
 dev-server.err.log
 *.log
+dev-server.out.log
+dev-server.err.log

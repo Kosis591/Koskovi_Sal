@@ -21,3 +21,11 @@ Vymazana Next.js cache: .next
  GET /api/availability 200 in 20ms
  GET /api/availability 200 in 21ms
  GET /api/availability 200 in 25ms
+ GET /api/availability 200 in 23ms
+ GET /api/availability 200 in 28ms
+ GET /api/availability 200 in 16ms
+ GET /api/availability 200 in 41ms
+ GET /api/availability 200 in 43ms
+ GET /api/availability 200 in 51ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 3.1s (738 modules)
