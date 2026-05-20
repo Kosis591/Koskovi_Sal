@@ -46,8 +46,15 @@ export default function RootLayout({
             __html: `
               try {
                 var savedTheme = localStorage.getItem("koskovi-theme");
-                var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-                var isDark = savedTheme ? savedTheme === "dark" : prefersDark;
+                var pragueHour = Number(new Intl.DateTimeFormat("cs-CZ", {
+                  hour: "numeric",
+                  hour12: false,
+                  timeZone: "Europe/Prague"
+                }).formatToParts(new Date()).find(function (part) {
+                  return part.type === "hour";
+                })?.value || "12");
+                var timeDefaultDark = pragueHour < 6 || pragueHour >= 17;
+                var isDark = savedTheme ? savedTheme === "dark" : timeDefaultDark;
                 document.documentElement.classList.toggle("dark", isDark);
                 document.documentElement.dataset.theme = isDark ? "dark" : "light";
               } catch (_) {}

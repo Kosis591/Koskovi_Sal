@@ -41,9 +41,8 @@ function applyTheme(isDark: boolean) {
 
 function getInitialTheme() {
   const savedTheme = window.localStorage.getItem(storageKey);
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  return savedTheme ? savedTheme === "dark" : prefersDark;
+  return savedTheme ? savedTheme === "dark" : getTimeBasedDefaultTheme();
 }
 
 function getThemeSnapshot() {
@@ -62,9 +61,25 @@ function subscribeTheme(onStoreChange: () => void) {
 
   window.addEventListener("storage", handleThemeChange);
   window.addEventListener(themeChangeEvent, onStoreChange);
+  const interval = window.setInterval(handleThemeChange, 60000);
 
   return () => {
     window.removeEventListener("storage", handleThemeChange);
     window.removeEventListener(themeChangeEvent, onStoreChange);
+    window.clearInterval(interval);
   };
+}
+
+function getTimeBasedDefaultTheme() {
+  const pragueHour = Number(
+    new Intl.DateTimeFormat("cs-CZ", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: "Europe/Prague",
+    })
+      .formatToParts(new Date())
+      .find((part) => part.type === "hour")?.value ?? "12",
+  );
+
+  return pragueHour < 6 || pragueHour >= 17;
 }
