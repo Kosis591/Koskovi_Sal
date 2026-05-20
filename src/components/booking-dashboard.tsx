@@ -85,6 +85,10 @@ const monthControlFormatter = new Intl.DateTimeFormat("cs-CZ", {
   month: "long",
   year: "numeric",
 });
+const weekControlFormatter = new Intl.DateTimeFormat("cs-CZ", {
+  day: "numeric",
+  month: "numeric",
+});
 
 type BookingDashboardProps = {
   initialBookings: Booking[];
@@ -140,11 +144,14 @@ export function BookingDashboard({
   const currentTimeMinutes = now
     ? now.getHours() * 60 + now.getMinutes()
     : null;
-  const todayDate = now ?? new Date(`${initialDate}T12:00:00`);
   const todayDateKey = currentDateKey || initialDate;
+  const selectedDateObject = useMemo(
+    () => new Date(`${selectedDate}T12:00:00`),
+    [selectedDate],
+  );
   const days = useMemo(
-    () => getWeekDays(getWeekStartDate(todayDateKey)),
-    [todayDateKey],
+    () => getWeekDays(getWeekStartDate(selectedDate)),
+    [selectedDate],
   );
   const selectedMonthKey = `${selectedDate.slice(0, 7)}-01`;
   const monthDays = useMemo(
@@ -290,7 +297,7 @@ export function BookingDashboard({
       window.cancelAnimationFrame(animationFrame);
       window.clearTimeout(timeout);
     };
-  }, [currentDateKey, viewMode]);
+  }, [currentDateKey, selectedDate, viewMode]);
 
   useEffect(() => {
     function syncWhenVisible() {
@@ -332,23 +339,59 @@ export function BookingDashboard({
     }
   }
 
-  function changeDisplayedMonth(offset: number) {
-    setViewMode("month");
-    setSelectedDate((currentDateKey) => {
-      const currentMonth = new Date(`${currentDateKey.slice(0, 7)}-01T12:00:00`);
-      currentMonth.setMonth(currentMonth.getMonth() + offset);
+  function setCalendarDate(nextDateKey: string, shouldScrollToCurrentTime = false) {
+    setSelectedDate(nextDateKey);
+    setRequest((current) => ({ ...current, date: nextDateKey }));
 
-      const nextDateKey = formatDateKey(currentMonth);
+    if (shouldScrollToCurrentTime) {
+      window.setTimeout(() => {
+        scrollCurrentTimeIntoView(calendarScrollerRef.current);
+      }, 120);
+    }
+  }
+
+  function changeDisplayedPeriod(offset: number) {
+    setSelectedDate((currentDateKey) => {
+      const currentDate = new Date(`${currentDateKey}T12:00:00`);
+
+      if (viewMode === "month") {
+        currentDate.setDate(1);
+        currentDate.setMonth(currentDate.getMonth() + offset);
+      } else if (viewMode === "week") {
+        currentDate.setDate(currentDate.getDate() + offset * 7);
+      } else {
+        currentDate.setDate(currentDate.getDate() + offset);
+      }
+
+      const nextDateKey = formatDateKey(currentDate);
       setRequest((current) => ({ ...current, date: nextDateKey }));
 
       return nextDateKey;
     });
   }
 
-  function showCurrentMonth() {
-    setViewMode("month");
-    setSelectedDate(todayDateKey);
-    updateRequest("date", todayDateKey);
+  function showCurrentPeriod() {
+    setCalendarDate(todayDateKey, true);
+  }
+
+  function getPeriodControlLabel() {
+    if (viewMode === "month") {
+      return monthControlFormatter.format(
+        new Date(`${selectedMonthKey}T12:00:00`),
+      );
+    }
+
+    if (viewMode === "week") {
+      const weekStart = getWeekStartDate(selectedDate);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+
+      return `${weekControlFormatter.format(weekStart)}-${weekControlFormatter.format(
+        weekEnd,
+      )}`;
+    }
+
+    return dayFormatter.format(selectedDateObject);
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -596,7 +639,7 @@ export function BookingDashboard({
             <div>
               <h2 className="text-xl font-semibold">
                 {viewMode === "today"
-                  ? "Dnešní dostupnost"
+                  ? `Denní dostupnost - ${dayFormatter.format(selectedDateObject)}`
                   : viewMode === "week"
                     ? "Týdenní dostupnost"
                     : `Měsíční dostupnost - ${monthLabelFormatter.format(
@@ -624,7 +667,7 @@ export function BookingDashboard({
                   }}
                   value={viewMode}
                 >
-                  <option value="today">Dnes</option>
+                  <option value="today">Den</option>
                   <option value="week">Týden</option>
                   <option value="month">Měsíc</option>
                 </select>
@@ -643,7 +686,7 @@ export function BookingDashboard({
                   type="button"
                 >
                   <Clock3 size={16} />
-                  Dnes
+                  Den
                 </button>
                 <button
                   className={`inline-flex items-center gap-1.5 border-l border-[#ded6c9] px-2 text-xs font-semibold transition md:gap-2 md:px-3 md:text-sm ${
@@ -672,37 +715,43 @@ export function BookingDashboard({
               </div>
               <div className="flex w-full items-center gap-3 sm:w-auto">
                 <ThemeToggle />
-                {viewMode === "month" ? (
-                  <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-[#ded6c9] bg-white sm:flex-none">
-                    <button
-                      aria-label="Předchozí měsíc"
-                      className="inline-flex h-11 w-10 shrink-0 items-center justify-center text-[#003758] transition hover:bg-[#f6f1e8]"
-                      onClick={() => changeDisplayedMonth(-1)}
-                      type="button"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button
-                      className="inline-flex h-11 min-w-0 flex-1 items-center justify-center border-x border-[#ded6c9] px-3 text-sm font-semibold capitalize text-[#003758] transition hover:bg-[#f6f1e8] sm:min-w-36"
-                      onClick={showCurrentMonth}
-                      type="button"
-                    >
-                      <span className="truncate">
-                        {monthControlFormatter.format(
-                          new Date(`${selectedMonthKey}T12:00:00`),
-                        )}
-                      </span>
-                    </button>
-                    <button
-                      aria-label="Další měsíc"
-                      className="inline-flex h-11 w-10 shrink-0 items-center justify-center text-[#003758] transition hover:bg-[#f6f1e8]"
-                      onClick={() => changeDisplayedMonth(1)}
-                      type="button"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                ) : null}
+                <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-[#ded6c9] bg-white sm:flex-none">
+                  <button
+                    aria-label={
+                      viewMode === "month"
+                        ? "Předchozí měsíc"
+                        : viewMode === "week"
+                          ? "Předchozí týden"
+                          : "Předchozí den"
+                    }
+                    className="inline-flex h-11 w-10 shrink-0 items-center justify-center text-[#003758] transition hover:bg-[#f6f1e8]"
+                    onClick={() => changeDisplayedPeriod(-1)}
+                    type="button"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    className="inline-flex h-11 min-w-0 flex-1 items-center justify-center border-x border-[#ded6c9] px-3 text-sm font-semibold capitalize text-[#003758] transition hover:bg-[#f6f1e8] sm:min-w-36"
+                    onClick={showCurrentPeriod}
+                    type="button"
+                  >
+                    <span className="truncate">{getPeriodControlLabel()}</span>
+                  </button>
+                  <button
+                    aria-label={
+                      viewMode === "month"
+                        ? "Další měsíc"
+                        : viewMode === "week"
+                          ? "Další týden"
+                          : "Další den"
+                    }
+                    className="inline-flex h-11 w-10 shrink-0 items-center justify-center text-[#003758] transition hover:bg-[#f6f1e8]"
+                    onClick={() => changeDisplayedPeriod(1)}
+                    type="button"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -747,29 +796,32 @@ export function BookingDashboard({
                     <button
                       className="selected-period-head relative z-20 border-l border-[#0b4d76] bg-[#0b4d76] px-3 py-3 text-left text-white ring-1 ring-white/50 shadow-[0_14px_26px_rgba(0,55,88,0.30),inset_0_-5px_0_#8fd7ac]"
                       onClick={() => {
-                        setSelectedDate(todayDateKey);
-                        updateRequest("date", todayDateKey);
+                        updateRequest("date", selectedDate);
                       }}
                       type="button"
                     >
                       <span className="block text-sm font-semibold capitalize">
-                        {dayFormatter.format(todayDate)}
+                        {dayFormatter.format(selectedDateObject)}
                       </span>
                       <span className="mt-1 block text-xs text-[#d7e6ed]">
-                        {formatEventCount(bookingDayCounts.get(todayDateKey) ?? 0)}
+                        {formatEventCount(bookingDayCounts.get(selectedDate) ?? 0)}
                       </span>
                     </button>
                   </div>
 
                   {timeSlots.map((time) => {
                     const { booking, cleanupBooking, isOpen } = getSlotState(
-                      todayDateKey,
+                      selectedDate,
                       time,
                     );
                     const slotFill = getSlotFill(time, booking, cleanupBooking);
                     const currentTimeOffset =
-                      currentTimeMinutes !== null
-                        ? getCurrentTimeOffset(todayDate, time, currentTimeMinutes)
+                      selectedDate === currentDateKey && currentTimeMinutes !== null
+                        ? getCurrentTimeOffset(
+                            selectedDateObject,
+                            time,
+                            currentTimeMinutes,
+                          )
                         : null;
 
                     return (
@@ -794,9 +846,8 @@ export function BookingDashboard({
                             currentTimeOffset !== null ? "true" : undefined
                           }
                           onClick={() => {
-                            setSelectedDate(todayDateKey);
                             if (isOpen && !booking && !cleanupBooking) {
-                              updateRequest("date", todayDateKey);
+                              updateRequest("date", selectedDate);
                               updateRequest("start", time);
                             }
                           }}

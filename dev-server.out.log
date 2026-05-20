@@ -9,22 +9,27 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1762ms
+ ✓ Ready in 1826ms
  ○ Compiling /api/availability ...
- ✓ Compiled /api/availability in 1382ms (302 modules)
- GET /api/availability 200 in 1566ms
+ ✓ Compiled /api/availability in 1414ms (302 modules)
+ GET /api/availability 200 in 1599ms
  GET /api/availability 200 in 26ms
- GET /api/availability 200 in 22ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 49ms
- GET /api/availability 200 in 37ms
- GET /api/availability 200 in 52ms
- GET /api/availability 200 in 15ms
- ○ Compiling / ...
- ✓ Compiled / in 2.6s (773 modules)
- GET / 200 in 3643ms
- GET /api/availability 200 in 35ms
- GET /api/availability 200 in 49ms
  GET /api/availability 200 in 17ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 19ms
+ GET /api/availability 200 in 15ms
+ GET /api/availability 200 in 25ms
+ GET /api/availability 200 in 79ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.5s (773 modules)
+ GET / 200 in 3873ms
+ GET /api/availability 200 in 336ms
+ GET /api/availability 200 in 15ms
+ GET /api/availability 200 in 13ms
+ GET /api/availability 200 in 22ms
+ GET /api/availability 200 in 20ms
+ GET /api/availability 200 in 27ms
+ GET /api/availability 200 in 33ms
+ GET /api/availability 200 in 32ms
+ GET /api/availability 200 in 15ms
+ GET /api/availability 200 in 20ms
+ GET /api/availability 200 in 13ms
+ GET /api/availability 200 in 29ms
