@@ -1,4 +1,4 @@
-import { rm } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 const projectRoot = process.cwd();
@@ -15,4 +15,5 @@ if (
 }
 
 await rm(nextDir, { force: true, recursive: true });
+await mkdir(path.join(nextDir, "diagnostics"), { recursive: true });
 console.log("Vymazana Next.js cache: .next");

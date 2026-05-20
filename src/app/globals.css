@@ -73,7 +73,7 @@ textarea {
 }
 
 .current-time-marker {
-  z-index: 9999;
+  z-index: 12;
 }
 
 .calendar-view-transition {
@@ -101,7 +101,7 @@ textarea {
 }
 
 [data-current-slot="true"] {
-  z-index: 60 !important;
+  z-index: 11 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,12 +4,21 @@ import { appendAuditLog } from "@/lib/audit-log";
 import { getAdminRequestUsername, isAdminRequest } from "@/lib/auth";
 import { createBooking, getBookings, type BookingInput } from "@/lib/bookings-db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   if (!isAdminRequest(await cookies())) {
     return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
   }
 
-  return NextResponse.json({ bookings: await getBookings() });
+  return NextResponse.json(
+    { bookings: await getBookings() },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    },
+  );
 }
 
 export async function POST(request: NextRequest) {

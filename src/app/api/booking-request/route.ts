@@ -2,9 +2,10 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { appendAuditLog } from "@/lib/audit-log";
 import { getAdminRequestUsername, isAdminRequest } from "@/lib/auth";
-import { isValidOptionalEmail, isValidPhone } from "@/lib/booking-validation";
 import { createBooking } from "@/lib/bookings-db";
 import type { BookingRequest } from "@/lib/schedule";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
@@ -19,23 +20,9 @@ export async function POST(request: NextRequest) {
 
   const payload = (await request.json()) as Partial<BookingRequest>;
 
-  if (!payload.name || !payload.phone || !payload.date || !payload.start || !payload.end) {
+  if (!payload.name || !payload.date || !payload.start || !payload.end) {
     return NextResponse.json(
       { message: "Chybí povinné údaje rezervace." },
-      { status: 400 },
-    );
-  }
-
-  if (!isValidPhone(payload.phone)) {
-    return NextResponse.json(
-      { message: "Telefon musí být ve správném tvaru." },
-      { status: 400 },
-    );
-  }
-
-  if (!isValidOptionalEmail(payload.email)) {
-    return NextResponse.json(
-      { message: "E-mail musí být ve správném tvaru." },
       { status: 400 },
     );
   }
@@ -50,12 +37,7 @@ export async function POST(request: NextRequest) {
     createdBy: actor,
     status: payload.eventType === "blokace" ? "maintenance" : "confirmed",
     trainer: payload.trainer,
-    note: [
-      `Telefon: ${payload.phone}`,
-      payload.email ? `E-mail: ${payload.email}` : null,
-      payload.trainer ? `Trenér: ${payload.trainer}` : null,
-      payload.note,
-    ]
+    note: [payload.trainer ? `Trenér: ${payload.trainer}` : null, payload.note]
       .filter(Boolean)
       .join("\n"),
   });
@@ -76,6 +58,7 @@ export async function POST(request: NextRequest) {
       actor,
       bookingId: result.booking.id,
       details: {
+        booking: result.booking,
         date: result.booking.date,
         end: result.booking.end,
         start: result.booking.start,
@@ -84,10 +67,17 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({
-    status: "accepted",
-    source: "database",
-    message: "Rezervace je uložena v databázi.",
-    booking: result.booking,
-  });
+  return NextResponse.json(
+    {
+      status: "accepted",
+      source: "database",
+      message: "Rezervace je uložena v databázi.",
+      booking: result.booking,
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    },
+  );
 }

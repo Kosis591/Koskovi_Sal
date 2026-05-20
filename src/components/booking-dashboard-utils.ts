@@ -363,13 +363,14 @@ export function scrollCurrentTimeIntoView(container: HTMLDivElement | null) {
   const currentSlotRect = currentSlot.getBoundingClientRect();
   const headerOffset = 84;
   const sideOffset = 180;
+  const shouldScrollSideways = container.dataset.calendarView === "month";
   const nextScrollTop =
     container.scrollTop + currentSlotRect.top - containerRect.top - headerOffset;
   const nextScrollLeft =
     container.scrollLeft + currentSlotRect.left - containerRect.left - sideOffset;
 
   container.scrollTo({
-    left: Math.max(0, nextScrollLeft),
+    left: shouldScrollSideways ? Math.max(0, nextScrollLeft) : 0,
     top: Math.max(0, nextScrollTop),
     behavior: "smooth",
   });

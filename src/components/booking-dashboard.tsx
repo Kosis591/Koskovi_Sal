@@ -8,9 +8,7 @@ import {
   LockKeyhole,
   LogIn,
   LogOut,
-  Mail,
   MapPin,
-  Phone,
   RefreshCcw,
   Send,
   ShieldCheck,
@@ -73,8 +71,6 @@ import {
 
 const initialRequest: BookingRequest = {
   name: "",
-  email: "",
-  phone: "+420 ",
   date: "2026-05-20",
   start: "16:00",
   end: "18:00",
@@ -368,6 +364,18 @@ export function BookingDashboard({
         return;
       }
 
+      const data = (await response.json()) as { booking?: Booking };
+
+      if (data.booking) {
+        setCalendarBookings((current) =>
+          [...current.filter((booking) => booking.id !== data.booking?.id), data.booking]
+            .filter((booking): booking is Booking => Boolean(booking))
+            .sort((left, right) =>
+              `${left.date}${left.start}`.localeCompare(`${right.date}${right.start}`),
+            ),
+        );
+      }
+
       setSubmitMessage("Rezervace je uložena v databázi.");
       await syncCalendar();
     } finally {
@@ -463,10 +471,10 @@ export function BookingDashboard({
   return (
     <SiteShell
       maxWidthClassName="max-w-[1840px]"
-      contentClassName={`grid gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:pl-6 lg:pr-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:pl-8 xl:pr-5 ${
+      contentClassName={`grid gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:pl-6 lg:pr-4 xl:pl-8 xl:pr-5 ${
         isAuthenticated
-          ? "2xl:grid-cols-[minmax(1040px,1fr)_minmax(600px,680px)] 2xl:pl-12"
-          : ""
+          ? "xl:grid-cols-[minmax(0,1fr)_minmax(560px,620px)] 2xl:grid-cols-[minmax(900px,1fr)_minmax(640px,760px)] 2xl:pl-12"
+          : "xl:grid-cols-[minmax(0,1fr)_340px]"
       }`}
       description={
         <>
@@ -637,6 +645,7 @@ export function BookingDashboard({
           {viewMode === "today" ? (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
+                data-calendar-view="today"
                 className="max-h-[min(760px,calc(100svh-112px))] max-w-full overflow-auto overscroll-contain"
                 ref={calendarScrollerRef}
               >
@@ -766,12 +775,13 @@ export function BookingDashboard({
           ) : viewMode === "week" ? (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
-                className="max-h-[min(760px,calc(100svh-112px))] max-w-full overflow-y-auto overflow-x-hidden overscroll-contain"
+                data-calendar-view="week"
+                className="max-h-[min(760px,calc(100svh-112px))] max-w-full overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-gutter:stable]"
                 ref={calendarScrollerRef}
               >
                 <div className="min-w-full">
-                  <div className="sticky top-0 z-20 grid grid-cols-[64px_repeat(7,minmax(104px,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[78px_repeat(7,minmax(136px,1fr))]">
-                    <div className="sticky left-0 z-30 bg-[#f6f1e8] px-2 py-2.5 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)] xl:px-3">
+                  <div className="sticky top-0 z-20 grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[64px_repeat(7,minmax(0,1fr))]">
+                    <div className="sticky left-0 z-30 bg-[#f6f1e8] px-2 py-2.5 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
                       Cas
                     </div>
                     {days.map((day) => {
@@ -779,7 +789,7 @@ export function BookingDashboard({
                       const isSelected = key === selectedDate;
                       return (
                         <button
-                          className={`border-l px-2 py-2.5 text-left transition xl:px-3 ${
+                          className={`min-w-0 border-l px-1.5 py-2.5 text-left transition xl:px-2 ${
                             isSelected
                               ? "selected-period-head relative z-20 border-[#0b4d76] bg-[#0b4d76] text-white ring-1 ring-white/50 shadow-[0_14px_26px_rgba(0,55,88,0.30),inset_0_-5px_0_#8fd7ac]"
                               : "border-[#ded6c9] hover:bg-[#fbf8f1]"
@@ -791,11 +801,11 @@ export function BookingDashboard({
                           }}
                           type="button"
                         >
-                          <span className="block text-sm font-semibold capitalize">
+                          <span className="block truncate text-xs font-semibold capitalize xl:text-sm">
                             {dayFormatter.format(day)}
                           </span>
                           <span
-                            className={`mt-1 block text-xs ${
+                            className={`mt-1 block truncate text-[11px] xl:text-xs ${
                               isSelected ? "text-[#d7e6ed]" : "text-[#66706f]"
                             }`}
                           >
@@ -808,10 +818,10 @@ export function BookingDashboard({
 
                   {timeSlots.map((time) => (
                     <div
-                      className="grid grid-cols-[64px_repeat(7,minmax(104px,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[78px_repeat(7,minmax(136px,1fr))]"
+                      className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[64px_repeat(7,minmax(0,1fr))]"
                       key={time}
                     >
-                      <div className="sticky left-0 z-10 bg-[#fcfaf6] px-2 py-2 text-xs font-medium text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.06)] xl:px-2.5 xl:text-sm">
+                      <div className="sticky left-0 z-10 bg-[#fcfaf6] px-1.5 py-2 text-[11px] font-medium text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.06)] xl:px-2 xl:text-xs">
                         {time}
                       </div>
                       {days.map((day) => {
@@ -928,6 +938,7 @@ export function BookingDashboard({
           ) : (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
               <div
+                data-calendar-view="month"
                 className="max-h-[min(760px,calc(100svh-112px))] max-w-full overflow-auto overscroll-contain"
                 ref={calendarScrollerRef}
               >
@@ -1106,7 +1117,7 @@ export function BookingDashboard({
         </div>
 
         <aside className={`flex flex-col gap-5 lg:max-h-[min(760px,calc(100svh-112px))] lg:overflow-y-auto lg:pr-1 ${
-          isAuthenticated ? "2xl:grid 2xl:grid-cols-2 2xl:items-start" : ""
+          isAuthenticated ? "xl:grid xl:max-h-none xl:grid-cols-[minmax(360px,1fr)_minmax(220px,260px)] xl:items-start xl:overflow-visible xl:pr-0 2xl:grid-cols-[minmax(420px,1fr)_minmax(260px,320px)]" : ""
         }`}>
           <div className={`rounded-lg border border-[#ded6c9] bg-white p-5 ${
             isAuthenticated ? "lg:order-2" : "lg:order-1"
@@ -1330,32 +1341,6 @@ export function BookingDashboard({
                       value={request.name}
                     />
                   </Field>
-                  <Field icon={<Mail size={16} />} label="E-mail">
-                    <input
-                      className="field-input"
-                      onChange={(event) =>
-                        updateRequest("email", event.target.value)
-                      }
-                      pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
-                      placeholder="kontakt@email.cz"
-                      type="email"
-                      value={request.email}
-                    />
-                  </Field>
-                  <Field icon={<Phone size={16} />} label="Telefon">
-                    <input
-                      className="field-input"
-                      onChange={(event) =>
-                        updateRequest("phone", event.target.value)
-                      }
-                      pattern="^(\+?\d{1,3}\s*)?(\d[\s-]*){9}$"
-                      placeholder="+420 777 777 777"
-                      title="Zadej telefon ve tvaru +420 777 777 777 nebo 777 777 777"
-                      type="tel"
-                      value={request.phone}
-                    />
-                  </Field>
-
                   <div className="grid grid-cols-2 gap-3">
                     <label className="field-label col-span-2">
                       Datum

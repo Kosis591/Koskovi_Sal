@@ -22,8 +22,6 @@ export type Booking = {
 
 export type BookingRequest = {
   name: string;
-  email?: string;
-  phone: string;
   date: string;
   start: string;
   end: string;

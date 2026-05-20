@@ -9,19 +9,24 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1771ms
+ ✓ Ready in 1816ms
  ○ Compiling / ...
- ✓ Compiled / in 3.1s (755 modules)
- GET / 200 in 4258ms
- GET / 200 in 866ms
- ✓ Compiled /favicon.ico in 231ms (469 modules)
- GET /favicon.ico 200 in 354ms
- ○ Compiling /api/auth/logout ...
- ✓ Compiled /api/auth/logout in 795ms (768 modules)
- POST /api/auth/logout 200 in 872ms
- GET / 200 in 170ms
- ✓ Compiled /api/auth/login in 204ms (768 modules)
- POST /api/auth/login 401 in 244ms
- GET / 200 in 87ms
- POST /api/auth/login 401 in 16ms
- POST /api/auth/login 401 in 14ms
+ ✓ Compiled / in 3.5s (751 modules)
+ GET / 200 in 4982ms
+ ✓ Compiled /favicon.ico in 243ms (467 modules)
+ GET /favicon.ico 200 in 383ms
+ ✓ Compiled /api/booking-request in 284ms (765 modules)
+ POST /api/booking-request 200 in 434ms
+ GET / 200 in 222ms
+ ✓ Compiled /api/availability in 362ms (767 modules)
+ GET /api/availability 200 in 305ms
+ ✓ Compiled /api/bookings/[id]/clean in 209ms (755 modules)
+ POST /api/bookings/cd787cb8-dd0e-41c8-887c-f4eb4c3a0c1c/clean 200 in 730ms
+ GET /api/availability 200 in 92ms
+ ✓ Compiled in 114ms (293 modules)
+ ✓ Compiled /api/bookings/[id] in 187ms (757 modules)
+ DELETE /api/bookings/cd787cb8-dd0e-41c8-887c-f4eb4c3a0c1c 200 in 714ms
+ GET /api/availability 200 in 69ms
+ ✓ Compiled in 103ms (293 modules)
+ ✓ Compiled /api/auth/logout in 218ms (759 modules)
+ POST /api/auth/logout 200 in 258ms
