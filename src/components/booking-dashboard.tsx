@@ -4,12 +4,13 @@ import {
   AlertCircle,
   CalendarDays,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   LockKeyhole,
   LogIn,
   LogOut,
   MapPin,
-  RefreshCcw,
   Send,
   ShieldCheck,
   Sparkles,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   cleanupCellStyle,
   dayFormatter,
@@ -80,6 +81,11 @@ const initialRequest: BookingRequest = {
   cleanupRequired: false,
 };
 
+const monthControlFormatter = new Intl.DateTimeFormat("cs-CZ", {
+  month: "long",
+  year: "numeric",
+});
+
 type BookingDashboardProps = {
   initialBookings: Booking[];
   initialDate: string;
@@ -126,7 +132,6 @@ export function BookingDashboard({
   const [recurringCancellations, setRecurringCancellations] = useState(
     initialRecurringCancellations,
   );
-  const [isSyncing, setIsSyncing] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -238,6 +243,18 @@ export function BookingDashboard({
       isOpen: false,
     };
 
+  const syncCalendar = useCallback(async () => {
+    const response = await fetch("/api/availability", { cache: "no-store" });
+    const data = (await response.json()) as {
+      source: string;
+      bookings: Booking[];
+      recurringCancellations?: RecurringCancellationNotice[];
+    };
+
+    setCalendarBookings(data.bookings);
+    setRecurringCancellations(data.recurringCancellations ?? []);
+  }, []);
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setSelectedDate(todayDateKey);
@@ -275,23 +292,26 @@ export function BookingDashboard({
     };
   }, [currentDateKey, viewMode]);
 
-  async function syncCalendar() {
-    setIsSyncing(true);
-
-    try {
-      const response = await fetch("/api/availability", { cache: "no-store" });
-      const data = (await response.json()) as {
-        source: string;
-        bookings: Booking[];
-        recurringCancellations?: RecurringCancellationNotice[];
-      };
-
-      setCalendarBookings(data.bookings);
-      setRecurringCancellations(data.recurringCancellations ?? []);
-    } finally {
-      setIsSyncing(false);
+  useEffect(() => {
+    function syncWhenVisible() {
+      if (document.visibilityState === "visible") {
+        void syncCalendar();
+      }
     }
-  }
+
+    const interval = window.setInterval(() => {
+      void syncCalendar();
+    }, 60000);
+
+    window.addEventListener("focus", syncWhenVisible);
+    document.addEventListener("visibilitychange", syncWhenVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", syncWhenVisible);
+      document.removeEventListener("visibilitychange", syncWhenVisible);
+    };
+  }, [syncCalendar]);
 
   function updateRequest(field: keyof BookingRequest, value: string) {
     setSubmitMessage("");
@@ -310,6 +330,25 @@ export function BookingDashboard({
       setSelectedDate(todayDateKey);
       updateRequest("date", todayDateKey);
     }
+  }
+
+  function changeDisplayedMonth(offset: number) {
+    setViewMode("month");
+    setSelectedDate((currentDateKey) => {
+      const currentMonth = new Date(`${currentDateKey.slice(0, 7)}-01T12:00:00`);
+      currentMonth.setMonth(currentMonth.getMonth() + offset);
+
+      const nextDateKey = formatDateKey(currentMonth);
+      setRequest((current) => ({ ...current, date: nextDateKey }));
+
+      return nextDateKey;
+    });
+  }
+
+  function showCurrentMonth() {
+    setViewMode("month");
+    setSelectedDate(todayDateKey);
+    updateRequest("date", todayDateKey);
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -633,14 +672,37 @@ export function BookingDashboard({
               </div>
               <div className="flex w-full items-center gap-3 sm:w-auto">
                 <ThemeToggle />
-                <button
-                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76] sm:flex-none"
-                  onClick={syncCalendar}
-                  type="button"
-                >
-                  <RefreshCcw size={17} />
-                  {isSyncing ? "Synchronizuji..." : "Synchronizovat"}
-                </button>
+                {viewMode === "month" ? (
+                  <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-[#ded6c9] bg-white sm:flex-none">
+                    <button
+                      aria-label="Předchozí měsíc"
+                      className="inline-flex h-11 w-10 shrink-0 items-center justify-center text-[#003758] transition hover:bg-[#f6f1e8]"
+                      onClick={() => changeDisplayedMonth(-1)}
+                      type="button"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      className="inline-flex h-11 min-w-0 flex-1 items-center justify-center border-x border-[#ded6c9] px-3 text-sm font-semibold capitalize text-[#003758] transition hover:bg-[#f6f1e8] sm:min-w-36"
+                      onClick={showCurrentMonth}
+                      type="button"
+                    >
+                      <span className="truncate">
+                        {monthControlFormatter.format(
+                          new Date(`${selectedMonthKey}T12:00:00`),
+                        )}
+                      </span>
+                    </button>
+                    <button
+                      aria-label="Další měsíc"
+                      className="inline-flex h-11 w-10 shrink-0 items-center justify-center text-[#003758] transition hover:bg-[#f6f1e8]"
+                      onClick={() => changeDisplayedMonth(1)}
+                      type="button"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
