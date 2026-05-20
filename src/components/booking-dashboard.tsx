@@ -117,6 +117,7 @@ export function BookingDashboard({
   const [cleaningBookingId, setCleaningBookingId] = useState("");
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deletingBookingId, setDeletingBookingId] = useState("");
+  const [reinstatingBookingId, setReinstatingBookingId] = useState("");
   const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
   const [trainerMessage, setTrainerMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -440,6 +441,28 @@ export function BookingDashboard({
     }
   }
 
+  async function handleReinstateRecurringBooking(bookingId: string) {
+    setDeleteMessage("");
+    setReinstatingBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/reinstate`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { message?: string };
+        setDeleteMessage(data.message ?? "Termín se nepodařilo obnovit.");
+        return;
+      }
+
+      setDeleteMessage("Pravidelný termín byl obnoven.");
+      await syncCalendar();
+    } finally {
+      setReinstatingBookingId("");
+    }
+  }
+
   async function handleUpdateBookingTrainer(bookingId: string, trainer: string) {
     setTrainerMessage("");
     setSavingTrainerBookingId(bookingId);
@@ -499,7 +522,12 @@ export function BookingDashboard({
           value: group.hours,
         })),
         sideContent: (
-          <RecurringCancellationPanel cancellations={recurringCancellations} />
+          <RecurringCancellationPanel
+            cancellations={recurringCancellations}
+            isAuthenticated={isAuthenticated}
+            onReinstate={handleReinstateRecurringBooking}
+            reinstatingId={reinstatingBookingId}
+          />
         ),
         subtitle: "Pravidelný provoz sálu",
         title: "Otevírací doba",

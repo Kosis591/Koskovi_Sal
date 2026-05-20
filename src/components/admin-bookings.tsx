@@ -111,6 +111,16 @@ export function AdminBookings() {
 
     return nextByKey;
   }, [bookings]);
+  const visibleAuditLog = useMemo(() => {
+    if (sessionUsername === "kosis") {
+      return auditLog;
+    }
+
+    return auditLog.filter(
+      (entry) =>
+        entry.action === "booking.delete" && entry.actor === sessionUsername,
+    );
+  }, [auditLog, sessionUsername]);
 
   useEffect(() => {
     async function loadSession() {
@@ -297,7 +307,7 @@ export function AdminBookings() {
         </form>
       ) : (
         <>
-          <section className="rounded-lg border border-[#ded6c9] bg-white p-5">
+          <section className="rounded-lg border border-[#ded6c9] bg-white p-5 lg:col-span-2">
             <div className="rounded-md border border-[#cde6d9] bg-[#eef8f2] p-4 text-sm text-[#245d3f]">
               <p className="font-semibold">Jsi přihlášen jako: {sessionUsername}</p>
               <p className="mt-1 text-[#5f716b]">
@@ -306,14 +316,40 @@ export function AdminBookings() {
               </p>
             </div>
 
+            <nav className="mt-4 grid gap-2 sm:grid-cols-3">
+              <a
+                className="inline-flex min-h-12 items-center justify-center rounded-md bg-[#003758] px-3 text-center text-sm font-semibold text-white transition hover:bg-[#0b4d76]"
+                href="#trenery"
+              >
+                Nastavení trenérů na tento týden
+              </a>
+              <a
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 text-center text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                href="#vsechny-akce"
+              >
+                Všechny akce
+              </a>
+              <a
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 text-center text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                href="#vraceni-akce"
+              >
+                Vrácení smazané akce
+              </a>
+            </nav>
+
             {message ? (
               <p className="mt-4 flex items-center gap-2 rounded-md border border-[#cde6d9] bg-[#f4fbf7] px-3 py-2 text-sm text-[#245d3f]">
                 <Check size={16} />
                 {message}
               </p>
             ) : null}
+          </section>
 
-            <div className="mt-5">
+          <section
+            className="scroll-mt-4 rounded-lg border border-[#ded6c9] bg-white p-5"
+            id="trenery"
+          >
+            <div>
               <h2 className="text-xl font-semibold">
                 Trenéři nejbližších tréninků
               </h2>
@@ -389,14 +425,106 @@ export function AdminBookings() {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
+          <section
+            className="scroll-mt-4 overflow-hidden rounded-lg border border-[#ded6c9] bg-white"
+            id="vsechny-akce"
+          >
             <div className="border-b border-[#ded6c9] px-5 py-4">
               <h2 className="text-xl font-semibold">Všechny akce</h2>
               <p className="mt-1 text-sm text-[#66706f]">
                 Zobrazeno {paginatedBookings.length} z {bookings.length} akcí.
               </p>
             </div>
-            <div className="overflow-x-auto">
+            <div className="grid gap-3 p-3 md:hidden">
+              {paginatedBookings.map((booking) => (
+                <article
+                  className="rounded-md border border-[#ded6c9] bg-[#fcfaf6] p-3"
+                  key={booking.id}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold">
+                        {booking.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[#66706f]">
+                        {booking.organizer}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-[#e7f1f6] px-2 py-1 text-xs font-semibold text-[#003758]">
+                      {formatBookingStatus(booking)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <div className="rounded-md border border-[#ece3d5] bg-white px-3 py-2">
+                      <span className="block text-[11px] font-semibold uppercase text-[#66706f]">
+                        Datum
+                      </span>
+                      <span className="mt-1 block font-semibold">
+                        {formatDateCz(booking.date)}
+                      </span>
+                    </div>
+                    <div className="rounded-md border border-[#ece3d5] bg-white px-3 py-2">
+                      <span className="block text-[11px] font-semibold uppercase text-[#66706f]">
+                        Čas
+                      </span>
+                      <span className="mt-1 block font-semibold">
+                        {booking.start}-{booking.end}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-2">
+                    <label className="field-label">
+                      Trenér
+                      <select
+                        className="field-input mt-1 min-h-10"
+                        disabled={savingTrainerBookingId === booking.id}
+                        onChange={(event) =>
+                          handleAdminBookingTrainerChange(
+                            booking.id,
+                            event.target.value,
+                          )
+                        }
+                        value={booking.trainer ?? ""}
+                      >
+                        <option value="">Bez trenéra</option>
+                        {trainerOptions.map((trainer) => (
+                          <option key={trainer} value={trainer}>
+                            {trainer}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="flex items-center justify-between gap-3 text-xs text-[#66706f]">
+                      <span>
+                        Přidal:{" "}
+                        <strong className="text-[#132935]">
+                          {booking.createdBy ?? "neznámý"}
+                        </strong>
+                      </span>
+                      {booking.cleanupRequired ? (
+                        <span className="font-semibold text-[#8c2f20]">
+                          {booking.cleanedAt ? "Uklizeno" : "Čeká na úklid"}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <button
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-[#edd3cc] bg-[#fff0eb] px-3 text-sm font-semibold text-[#8c2f20] transition hover:bg-[#ffe3da]"
+                      onClick={() => handleDelete(booking.id)}
+                      type="button"
+                    >
+                      <Trash2 size={15} />
+                      Smazat
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[820px] border-collapse text-left text-sm">
                 <thead className="bg-[#f6f1e8] text-xs uppercase text-[#66706f]">
                   <tr>
@@ -508,20 +636,25 @@ export function AdminBookings() {
           </section>
 
           {sessionUsername ? (
-            <section className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:col-span-2">
+            <section
+              className="scroll-mt-4 overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:col-span-2"
+              id="vraceni-akce"
+            >
               <div className="border-b border-[#ded6c9] px-5 py-4">
                 <h2 className="text-xl font-semibold">
-                  {sessionUsername === "kosis" ? "Log operací" : "Moje smazané akce"}
+                  {sessionUsername === "kosis"
+                    ? "Log operací"
+                    : "Vrácení smazané akce"}
                 </h2>
                 <p className="mt-1 text-sm text-[#66706f]">
                   {sessionUsername === "kosis"
                     ? "Posledních 100 operací. Soubor logu se automaticky drží pod 100 MB."
-                    : "Tady můžeš vrátit akci, kterou jsi smazal omylem. Jakmile termín proběhne, vrácení se schová."}
+                    : "Tady uvidíš jen akce, které jsi smazal. Jakmile termín proběhne, vrácení se schová."}
                 </p>
               </div>
               <div className="divide-y divide-[#ece3d5]">
-                {auditLog.length > 0 ? (
-                  auditLog.map((entry) => (
+                {visibleAuditLog.length > 0 ? (
+                  visibleAuditLog.map((entry) => (
                     <div
                       className="grid gap-2 px-5 py-3 text-sm md:grid-cols-[170px_120px_1fr_auto] md:items-center"
                       key={`${entry.timestamp}-${entry.action}-${entry.bookingId}`}
@@ -555,7 +688,9 @@ export function AdminBookings() {
                   ))
                 ) : (
                   <div className="px-5 py-4 text-sm text-[#66706f]">
-                    Zatím nejsou zaznamenané žádné operace.
+                    {sessionUsername === "kosis"
+                      ? "Zatím nejsou zaznamenané žádné operace."
+                      : "Zatím nemáš žádnou smazanou akci k vrácení."}
                   </div>
                 )}
               </div>

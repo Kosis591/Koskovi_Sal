@@ -9,24 +9,18 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1816ms
- ○ Compiling / ...
- ✓ Compiled / in 3.5s (751 modules)
- GET / 200 in 4982ms
- ✓ Compiled /favicon.ico in 243ms (467 modules)
- GET /favicon.ico 200 in 383ms
- ✓ Compiled /api/booking-request in 284ms (765 modules)
- POST /api/booking-request 200 in 434ms
- GET / 200 in 222ms
- ✓ Compiled /api/availability in 362ms (767 modules)
- GET /api/availability 200 in 305ms
- ✓ Compiled /api/bookings/[id]/clean in 209ms (755 modules)
- POST /api/bookings/cd787cb8-dd0e-41c8-887c-f4eb4c3a0c1c/clean 200 in 730ms
- GET /api/availability 200 in 92ms
- ✓ Compiled in 114ms (293 modules)
- ✓ Compiled /api/bookings/[id] in 187ms (757 modules)
- DELETE /api/bookings/cd787cb8-dd0e-41c8-887c-f4eb4c3a0c1c 200 in 714ms
- GET /api/availability 200 in 69ms
- ✓ Compiled in 103ms (293 modules)
- ✓ Compiled /api/auth/logout in 218ms (759 modules)
- POST /api/auth/logout 200 in 258ms
+ ✓ Ready in 1788ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 3s (713 modules)
+ GET /admin 200 in 3463ms
+ ✓ Compiled /api/auth/session in 346ms (442 modules)
+ ✓ Compiled in 335ms (280 modules)
+ GET /favicon.ico 200 in 938ms
+ GET /api/auth/session 200 in 903ms
+ GET /admin 200 in 292ms
+ ○ Compiling /api/recurring-trainers ...
+ ✓ Compiled /api/recurring-trainers in 503ms (729 modules)
+ GET /api/recurring-trainers 200 in 570ms
+ GET /api/bookings 200 in 578ms
+ ✓ Compiled /api/audit-log in 171ms (731 modules)
+ GET /api/audit-log 200 in 209ms

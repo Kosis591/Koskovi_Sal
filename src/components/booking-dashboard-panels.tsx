@@ -12,8 +12,14 @@ import { formatDateKey } from "@/lib/schedule";
 
 export function RecurringCancellationPanel({
   cancellations,
+  isAuthenticated,
+  onReinstate,
+  reinstatingId,
 }: {
   cancellations: RecurringCancellationNotice[];
+  isAuthenticated?: boolean;
+  onReinstate?: (id: string) => void;
+  reinstatingId?: string;
 }) {
   if (cancellations.length === 0) {
     return (
@@ -30,17 +36,33 @@ export function RecurringCancellationPanel({
           className="rounded-md border border-[#ffb4a8] bg-[#7f1d1d] px-4 py-3 text-sm text-white shadow-[0_12px_26px_rgba(0,0,0,0.18)]"
           key={cancellation.id}
         >
-          <p className="flex items-center gap-2 font-semibold">
-            <AlertCircle size={17} />
-            Zrušený pravidelný trénink
-          </p>
-          <p className="mt-1 text-[#ffe0dc]">
-            {cancellation.title} v datu{" "}
-            {cancellationDateFormatter.format(
-              new Date(`${cancellation.date}T12:00:00`),
-            )}{" "}
-            od {cancellation.start} do {cancellation.end}.
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="flex items-center gap-2 font-semibold">
+                <AlertCircle size={17} />
+                Zrušený pravidelný trénink
+              </p>
+              <p className="mt-1 text-[#ffe0dc]">
+                {cancellation.title} v datu{" "}
+                {cancellationDateFormatter.format(
+                  new Date(`${cancellation.date}T12:00:00`),
+                )}{" "}
+                od {cancellation.start} do {cancellation.end}.
+              </p>
+            </div>
+            {isAuthenticated && onReinstate ? (
+              <button
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-md border border-white/30 bg-white px-3 text-xs font-semibold text-[#7f1d1d] transition hover:bg-[#ffe0dc] disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={reinstatingId === cancellation.id}
+                onClick={() => onReinstate(cancellation.id)}
+                type="button"
+              >
+                {reinstatingId === cancellation.id
+                  ? "Obnovuji..."
+                  : "Obnovit termín"}
+              </button>
+            ) : null}
+          </div>
         </div>
       ))}
     </div>
