@@ -686,13 +686,35 @@ function findBookingConflict(
       return false;
     }
 
-    return timeRangesOverlap(
+    if (
+      !timeRangesOverlap(
       input.start,
       input.end,
       booking.start,
       booking.end,
-    );
+      )
+    ) {
+      return false;
+    }
+
+    return resourcesConflict(booking, input);
   });
+}
+
+function resourcesConflict(booking: Booking, input: BookingInput) {
+  const bookingIsIndividualLesson =
+    booking.bookingKind === "individual-lesson";
+  const inputIsIndividualLesson = input.bookingKind === "individual-lesson";
+
+  if (bookingIsIndividualLesson && inputIsIndividualLesson) {
+    if (!booking.trainer || !input.trainer) {
+      return true;
+    }
+
+    return booking.trainer === input.trainer;
+  }
+
+  return true;
 }
 
 function removeRecurringConflicts(

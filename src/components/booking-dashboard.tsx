@@ -76,6 +76,7 @@ const initialRequest: BookingRequest = {
   start: "16:00",
   end: "18:00",
   eventType: "tanecni-lekce",
+  bookingKind: "hall",
   trainer: "",
   note: "",
   cleanupRequired: false,
@@ -100,6 +101,8 @@ type BookingDashboardProps = {
   };
 };
 
+type AppMode = "hall" | "lessons";
+
 export function BookingDashboard({
   initialBookings,
   initialDate,
@@ -120,6 +123,8 @@ export function BookingDashboard({
     initialSession.authenticated,
   );
   const [sessionUsername, setSessionUsername] = useState(initialSession.username);
+  const [appMode, setAppMode] = useState<AppMode>("hall");
+  const [selectedLessonTrainer, setSelectedLessonTrainer] = useState("");
   const isCheckingSession = false;
   const [authError, setAuthError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
@@ -139,7 +144,18 @@ export function BookingDashboard({
   const [now, setNow] = useState<Date | null>(null);
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
 
-  const timeSlots = useMemo(() => createTimeSlots(), []);
+  const canUseLessonMode =
+    isAuthenticated &&
+    ["kosis", "tkkoskovi"].includes(
+      (sessionUsername ?? "").toLocaleLowerCase("cs-CZ"),
+    );
+  const activeAppMode: AppMode = canUseLessonMode ? appMode : "hall";
+  const activeSlotMinutes =
+    activeAppMode === "lessons" ? 45 : hallSettings.slotMinutes;
+  const timeSlots = useMemo(
+    () => createTimeSlots(activeSlotMinutes),
+    [activeSlotMinutes],
+  );
   const currentDateKey = now ? formatDateKey(now) : "";
   const currentTimeMinutes = now
     ? now.getHours() * 60 + now.getMinutes()
@@ -158,10 +174,54 @@ export function BookingDashboard({
     () => getMonthDays(selectedMonthKey),
     [selectedMonthKey],
   );
-  const selectedBookings = useMemo(
-    () => calendarBookings.filter((booking) => booking.date === selectedDate),
-    [calendarBookings, selectedDate],
+  const hallBookings = useMemo(
+    () =>
+      calendarBookings.filter(
+        (booking) => booking.bookingKind !== "individual-lesson",
+      ),
+    [calendarBookings],
   );
+  const lessonBookings = useMemo(
+    () =>
+      calendarBookings.filter(
+        (booking) => booking.bookingKind === "individual-lesson",
+      ),
+    [calendarBookings],
+  );
+  const activeModeBookings =
+    activeAppMode === "lessons" ? lessonBookings : hallBookings;
+  const selectedBookings = useMemo(
+    () => activeModeBookings.filter((booking) => booking.date === selectedDate),
+    [activeModeBookings, selectedDate],
+  );
+  const availableTrainers = useMemo(() => {
+    const trainers = new Set(trainerOptions);
+
+    for (const booking of calendarBookings) {
+      if (booking.trainer) {
+        trainers.add(booking.trainer);
+      }
+    }
+
+    return [...trainers];
+  }, [calendarBookings]);
+  const activeLessonTrainer =
+    availableTrainers.includes(selectedLessonTrainer)
+      ? selectedLessonTrainer
+      : availableTrainers[0] ?? "";
+  const selectedTrainerWeekLessons = useMemo(() => {
+    const weekDateKeys = new Set(days.map((day) => formatDateKey(day)));
+
+    return lessonBookings
+      .filter(
+        (booking) =>
+          booking.trainer === activeLessonTrainer &&
+          weekDateKeys.has(booking.date),
+      )
+      .sort((left, right) =>
+        `${left.date}${left.start}`.localeCompare(`${right.date}${right.start}`),
+      );
+  }, [activeLessonTrainer, days, lessonBookings]);
   const visibleDateKeys = useMemo(() => {
     const keys = new Set<string>([todayDateKey]);
 
@@ -178,7 +238,7 @@ export function BookingDashboard({
   const bookingDayCounts = useMemo(() => {
     const counts = new Map<string, number>();
 
-    for (const booking of calendarBookings) {
+    for (const booking of activeModeBookings) {
       if (!isCountableEvent(booking)) {
         continue;
       }
@@ -187,14 +247,14 @@ export function BookingDashboard({
     }
 
     return counts;
-  }, [calendarBookings]);
+  }, [activeModeBookings]);
   const weeklyEventCount = useMemo(() => {
     const weekDateKeys = new Set(days.map((day) => formatDateKey(day)));
 
-    return calendarBookings.filter(
+    return activeModeBookings.filter(
       (booking) => weekDateKeys.has(booking.date) && isCountableEvent(booking),
     ).length;
-  }, [calendarBookings, days]);
+  }, [activeModeBookings, days]);
   const slotStateMap = useMemo(() => {
     const states = new Map<string, SlotState>();
 
@@ -203,10 +263,20 @@ export function BookingDashboard({
 
       for (const time of timeSlots) {
         const isOpen = isSlotOpen(date, time);
-        const booking = isSlotBooked(calendarBookings, dateKey, time);
+        const booking = isSlotBooked(
+          activeModeBookings,
+          dateKey,
+          time,
+          activeSlotMinutes,
+        );
         const cleanupBooking =
           isOpen && !booking
-            ? getPendingCleanupBooking(calendarBookings, dateKey, time)
+            ? getPendingCleanupBooking(
+                activeModeBookings,
+                dateKey,
+                time,
+                activeSlotMinutes,
+              )
             : undefined;
 
         states.set(getSlotStateKey(dateKey, time), {
@@ -218,10 +288,15 @@ export function BookingDashboard({
     }
 
     return states;
-  }, [calendarBookings, timeSlots, visibleDateKeys]);
+  }, [activeModeBookings, activeSlotMinutes, timeSlots, visibleDateKeys]);
   const selectedDaySegments = useMemo(
-    () => getDayAvailabilitySegments(selectedDate, calendarBookings),
-    [selectedDate, calendarBookings],
+    () =>
+      getDayAvailabilitySegments(
+        selectedDate,
+        activeModeBookings,
+        activeSlotMinutes,
+      ),
+    [activeModeBookings, activeSlotMinutes, selectedDate],
   );
   const freeSlots = useMemo(
     () => timeSlots.filter((time) => {
@@ -233,7 +308,7 @@ export function BookingDashboard({
     }),
     [selectedDate, slotStateMap, timeSlots],
   );
-  const freeHours = freeSlots.length * (hallSettings.slotMinutes / 60);
+  const freeHours = freeSlots.length * (activeSlotMinutes / 60);
   const todaysOpeningHours = useMemo(
     () => formatOpeningHoursForDate(new Date()),
     [],
@@ -249,6 +324,24 @@ export function BookingDashboard({
       cleanupBooking: undefined,
       isOpen: false,
     };
+  const getLessonSlotState = (trainer: string, dateKey: string, time: string) => {
+    const date = new Date(`${dateKey}T12:00:00`);
+    const isOpen = isSlotOpen(date, time);
+    const hallBlocker = findOverlappingBooking(
+      hallBookings,
+      dateKey,
+      time,
+      activeSlotMinutes,
+    );
+    const trainerBooking = findOverlappingBooking(
+      lessonBookings.filter((booking) => booking.trainer === trainer),
+      dateKey,
+      time,
+      activeSlotMinutes,
+    );
+
+    return { hallBlocker, isOpen, trainerBooking };
+  };
 
   const syncCalendar = useCallback(async () => {
     const response = await fetch("/api/availability", { cache: "no-store" });
@@ -328,6 +421,21 @@ export function BookingDashboard({
   function updateCleanupRequired(value: boolean) {
     setSubmitMessage("");
     setRequest((current) => ({ ...current, cleanupRequired: value }));
+  }
+
+  function selectLessonSlot(trainer: string, dateKey: string, time: string) {
+    setSubmitMessage("");
+    setSelectedDate(dateKey);
+    setRequest((current) => ({
+      ...current,
+      bookingKind: "individual-lesson",
+      cleanupRequired: false,
+      date: dateKey,
+      end: addMinutesToTime(time, activeSlotMinutes),
+      eventType: "tanecni-lekce",
+      start: time,
+      trainer,
+    }));
   }
 
   function changeViewMode(nextViewMode: "today" | "week" | "month") {
@@ -433,7 +541,11 @@ export function BookingDashboard({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          ...request,
+          bookingKind:
+            activeAppMode === "lessons" ? "individual-lesson" : "hall",
+        }),
       });
 
       if (response.status === 409) {
@@ -588,14 +700,53 @@ export function BookingDashboard({
       }
       eyebrow={
         <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[#d7e6ed]">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+          <button
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+              activeAppMode === "hall"
+                ? "border-white/35 bg-white/20 text-white"
+                : "border-white/20 bg-white/10 hover:bg-white/15"
+            }`}
+            onClick={() => {
+              setAppMode("hall");
+              setRequest((current) => ({
+                ...current,
+                bookingKind: "hall",
+              }));
+            }}
+            type="button"
+          >
             <Sparkles size={15} />
             Rezervace sálu
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <MapPin size={15} />
-            {hallSettings.location}
-          </span>
+          </button>
+          {canUseLessonMode ? (
+            <button
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+                activeAppMode === "lessons"
+                  ? "border-white/35 bg-white/20 text-white"
+                  : "border-white/20 bg-white/10 hover:bg-white/15"
+              }`}
+              onClick={() => {
+                setAppMode("lessons");
+                setViewMode("week");
+                setRequest((current) => ({
+                  ...current,
+                  bookingKind: "individual-lesson",
+                  cleanupRequired: false,
+                  eventType: "tanecni-lekce",
+                  trainer: activeLessonTrainer,
+                }));
+              }}
+              type="button"
+            >
+              <User size={15} />
+              Individuální lekce
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <MapPin size={15} />
+              {hallSettings.location}
+            </span>
+          )}
         </div>
       }
       infoPanel={{
@@ -632,13 +783,19 @@ export function BookingDashboard({
             ]
           : []),
       ]}
-      title="Dostupnost tanečního sálu"
+      title={
+        activeAppMode === "lessons"
+          ? "Dostupnost individuálních lekcí"
+          : "Dostupnost tanečního sálu"
+      }
     >
         <div className="min-w-0 space-y-6">
           <div className="flex flex-col gap-4 border-b border-[#ded6c9] pb-5 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold">
-                {viewMode === "today"
+                {activeAppMode === "lessons"
+                  ? `Individuální lekce - ${activeLessonTrainer}`
+                  : viewMode === "today"
                   ? `Denní dostupnost - ${dayFormatter.format(selectedDateObject)}`
                   : viewMode === "week"
                     ? "Týdenní dostupnost"
@@ -647,33 +804,38 @@ export function BookingDashboard({
                       )}`}
               </h2>
               <p className="mt-1 text-sm text-[#66706f]">
-                {viewMode === "week"
-                  ? "Kliknutím na den zobrazíš rychlý detail a volné časy."
-                  : "Dny jsou pod sebou, časy najdeš v horní hlavičce tabulky."}
+                {activeAppMode === "lessons"
+                  ? "Testovací režim pro individuální lekce používá stejné otevírací časy a 45minutové sloty."
+                  : viewMode === "week"
+                    ? "Kliknutím na den zobrazíš rychlý detail a volné časy."
+                    : "Dny jsou pod sebou, časy najdeš v horní hlavičce tabulky."}
               </p>
             </div>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-              <label className="mobile-view-select field-label">
-                Zobrazení
-                <select
-                  className="field-input mt-1"
-                  onChange={(event) => {
-                    const nextViewMode = event.target.value as
-                      | "today"
-                      | "week"
-                      | "month";
+              {activeAppMode === "hall" ? (
+                <label className="mobile-view-select field-label">
+                  Zobrazení
+                  <select
+                    className="field-input mt-1"
+                    onChange={(event) => {
+                      const nextViewMode = event.target.value as
+                        | "today"
+                        | "week"
+                        | "month";
 
-                    changeViewMode(nextViewMode);
-                  }}
-                  value={viewMode}
-                >
-                  <option value="today">Den</option>
-                  <option value="week">Týden</option>
-                  <option value="month">Měsíc</option>
-                </select>
-              </label>
+                      changeViewMode(nextViewMode);
+                    }}
+                    value={viewMode}
+                  >
+                    <option value="today">Den</option>
+                    <option value="week">Týden</option>
+                    <option value="month">Měsíc</option>
+                  </select>
+                </label>
+              ) : null}
 
-              <div className="hidden h-10 overflow-hidden rounded-md border border-[#ded6c9] bg-white sm:inline-flex md:h-11">
+              {activeAppMode === "hall" ? (
+                <div className="hidden h-10 overflow-hidden rounded-md border border-[#ded6c9] bg-white sm:inline-flex md:h-11">
                 <button
                   className={`inline-flex items-center gap-1.5 px-2 text-xs font-semibold transition md:gap-2 md:px-3 md:text-sm ${
                     viewMode === "today"
@@ -712,7 +874,8 @@ export function BookingDashboard({
                   <CalendarDays size={16} />
                   Měsíc
                 </button>
-              </div>
+                </div>
+              ) : null}
               <div className="flex w-full items-center gap-3 sm:w-auto">
                 <ThemeToggle />
                 <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-[#ded6c9] bg-white sm:flex-none">
@@ -767,6 +930,308 @@ export function BookingDashboard({
             </div>
           ) : null}
 
+          {activeAppMode === "lessons" ? (
+            <div className="calendar-view-transition grid gap-4 lg:hidden">
+              <div className="rounded-lg border border-[#ded6c9] bg-white p-3">
+                <p className="px-1 text-xs font-semibold uppercase text-[#66706f]">
+                  Trenéři
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {availableTrainers.map((trainer) => {
+                    const isActive = trainer === activeLessonTrainer;
+                    const lessonCount = lessonBookings.filter(
+                      (booking) =>
+                        booking.trainer === trainer &&
+                        days.some((day) => formatDateKey(day) === booking.date),
+                    ).length;
+
+                    return (
+                      <button
+                        className={`rounded-md border px-3 py-2 text-left text-sm font-semibold transition ${
+                          isActive
+                            ? "border-[#0b4d76] bg-[#003758] text-white shadow-[0_10px_20px_rgba(0,55,88,0.20)]"
+                            : "border-[#ded6c9] bg-[#fcfaf6] text-[#35505b] hover:bg-[#eef7fb]"
+                        }`}
+                        key={trainer}
+                        onClick={() => {
+                          setSelectedLessonTrainer(trainer);
+                          setRequest((current) => ({
+                            ...current,
+                            bookingKind: "individual-lesson",
+                            trainer,
+                          }));
+                        }}
+                        type="button"
+                      >
+                        <span className="block">{trainer}</span>
+                        <span
+                          className={`mt-1 block text-xs font-medium ${
+                            isActive ? "text-[#d7e6ed]" : "text-[#66706f]"
+                          }`}
+                        >
+                          {formatEventCount(lessonCount)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#ded6c9] bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-[#66706f]">
+                      Lekce trenéra
+                    </p>
+                    <h3 className="mt-1 text-xl font-semibold">
+                      {activeLessonTrainer}
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-[#e7f1f6] px-3 py-1 text-xs font-semibold text-[#003758]">
+                    {formatEventCount(selectedTrainerWeekLessons.length)}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {selectedTrainerWeekLessons.length > 0 ? (
+                    selectedTrainerWeekLessons.map((booking) => (
+                      <article
+                        className="rounded-md border border-[#ded6c9] bg-[#fcfaf6] p-3"
+                        key={booking.id}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold capitalize text-[#66706f]">
+                              {longDateFormatter.format(
+                                new Date(`${booking.date}T12:00:00`),
+                              )}
+                            </p>
+                            <h4 className="mt-1 truncate text-lg font-semibold">
+                              {booking.title}
+                            </h4>
+                            <p className="mt-0.5 text-sm text-[#66706f]">
+                              {booking.organizer}
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-[#eef8f2] px-2 py-1 text-xs font-semibold text-[#246043]">
+                            {booking.start}-{booking.end}
+                          </span>
+                        </div>
+                        {booking.note ? (
+                          <p className="mt-3 rounded-md border border-[#ece3d5] bg-white px-3 py-2 text-xs text-[#66706f]">
+                            {booking.note}
+                          </p>
+                        ) : null}
+                      </article>
+                    ))
+                  ) : (
+                    <div className="rounded-md border border-[#d8eadf] bg-[#f3fbf5] p-4 text-sm text-[#246043]">
+                      Tento trenér nemá v zobrazeném týdnu žádné individuální lekce.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {activeAppMode === "lessons" ? (
+            <div className="calendar-view-transition hidden gap-4 lg:grid lg:grid-cols-[176px_minmax(0,1fr)]">
+              <div className="rounded-lg border border-[#ded6c9] bg-white p-3">
+                <p className="px-1 text-xs font-semibold uppercase text-[#66706f]">
+                  Trenéři
+                </p>
+                <div className="mt-3 grid gap-2 lg:grid-cols-1">
+                  {availableTrainers.map((trainer) => {
+                    const isActive = trainer === activeLessonTrainer;
+                    const lessonCount = lessonBookings.filter(
+                      (booking) =>
+                        booking.trainer === trainer &&
+                        days.some((day) => formatDateKey(day) === booking.date),
+                    ).length;
+
+                    return (
+                      <button
+                        className={`rounded-md border px-3 py-2 text-left text-sm font-semibold transition ${
+                          isActive
+                            ? "border-[#0b4d76] bg-[#003758] text-white shadow-[0_10px_20px_rgba(0,55,88,0.20)]"
+                            : "border-[#ded6c9] bg-[#fcfaf6] text-[#35505b] hover:bg-[#eef7fb]"
+                        }`}
+                        key={trainer}
+                        onClick={() => {
+                          setSelectedLessonTrainer(trainer);
+                          setRequest((current) => ({
+                            ...current,
+                            bookingKind: "individual-lesson",
+                            trainer,
+                          }));
+                        }}
+                        type="button"
+                      >
+                        <span className="block">{trainer}</span>
+                        <span
+                          className={`mt-1 block text-xs font-medium ${
+                            isActive ? "text-[#d7e6ed]" : "text-[#66706f]"
+                          }`}
+                        >
+                          {formatEventCount(lessonCount)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
+                <div
+                  className="max-h-[min(760px,calc(100svh-112px))] max-w-full overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-gutter:stable]"
+                  ref={calendarScrollerRef}
+                >
+                  <div className="min-w-full">
+                    <div className="sticky top-0 z-30 grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-[#ded6c9] bg-[#f6f1e8] shadow-sm xl:grid-cols-[72px_repeat(7,minmax(0,1fr))]">
+                      <div className="sticky left-0 z-40 bg-[#f6f1e8] px-2 py-2.5 text-xs font-semibold uppercase text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.08)]">
+                        Čas
+                      </div>
+                      {days.map((day) => {
+                        const dateKey = formatDateKey(day);
+                        const isSelected = dateKey === selectedDate;
+                        const trainerDayCount = lessonBookings.filter(
+                          (booking) =>
+                            booking.trainer === activeLessonTrainer &&
+                            booking.date === dateKey,
+                        ).length;
+
+                        return (
+                          <button
+                            className={`min-w-0 border-l px-1.5 py-2.5 text-left transition xl:px-2 ${
+                              isSelected
+                                ? "selected-period-head relative z-20 border-[#0b4d76] bg-[#0b4d76] text-white ring-1 ring-white/50 shadow-[0_14px_26px_rgba(0,55,88,0.30),inset_0_-5px_0_#8fd7ac]"
+                                : "border-[#ded6c9] hover:bg-[#fbf8f1]"
+                            }`}
+                            key={dateKey}
+                            onClick={() => setCalendarDate(dateKey)}
+                            type="button"
+                          >
+                            <span className="block truncate text-xs font-semibold capitalize xl:text-sm">
+                              {dayFormatter.format(day)}
+                            </span>
+                            <span
+                              className={`mt-1 block truncate text-[11px] xl:text-xs ${
+                                isSelected ? "text-[#d7e6ed]" : "text-[#66706f]"
+                              }`}
+                            >
+                              {formatEventCount(trainerDayCount)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {timeSlots.map((time) => (
+                      <div
+                        className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-[#ece3d5] last:border-b-0 xl:grid-cols-[72px_repeat(7,minmax(0,1fr))]"
+                        key={time}
+                      >
+                        <div className="sticky left-0 z-20 bg-[#fcfaf6] px-2 py-2 text-[11px] font-medium text-[#66706f] shadow-[4px_0_10px_rgba(19,41,53,0.06)] xl:text-xs">
+                          {time}
+                        </div>
+                        {days.map((day) => {
+                          const dateKey = formatDateKey(day);
+                          const isSelectedDay = dateKey === selectedDate;
+                          const { hallBlocker, isOpen, trainerBooking } =
+                            getLessonSlotState(activeLessonTrainer, dateKey, time);
+                          const isSelectedSlot =
+                            request.bookingKind === "individual-lesson" &&
+                            request.date === dateKey &&
+                            request.start === time &&
+                            request.trainer === activeLessonTrainer;
+                          const isFree = isOpen && !hallBlocker && !trainerBooking;
+                          const currentTimeOffset =
+                            dateKey === currentDateKey && currentTimeMinutes !== null
+                              ? getCurrentTimeOffset(
+                                  day,
+                                  time,
+                                  currentTimeMinutes,
+                                  activeSlotMinutes,
+                                )
+                              : null;
+
+                          return (
+                            <button
+                              className={`relative min-h-12 border-l border-[#ece3d5] px-1.5 py-1.5 text-left text-[11px] transition xl:px-2 xl:text-xs ${
+                                !isOpen
+                                  ? isSelectedDay
+                                    ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18)]"
+                                    : "bg-[#f3f0ea] text-[#9a9288]"
+                                  : hallBlocker
+                                    ? "bg-[#fff0eb] text-[#8c2f20]"
+                                    : trainerBooking
+                                      ? "bg-[#fce9e3] text-[#8c2f20]"
+                                      : isSelectedSlot || isSelectedDay
+                                        ? "selected-period-cell relative z-10 bg-[#eef7fb] text-[#17475f] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18)] hover:bg-[#e5f2f8]"
+                                        : "bg-white text-[#246043] hover:bg-[#eef8f2]"
+                              }`}
+                              disabled={!isFree}
+                              key={`${dateKey}-${time}`}
+                              onClick={() =>
+                                selectLessonSlot(activeLessonTrainer, dateKey, time)
+                              }
+                              title={
+                                hallBlocker
+                                  ? `Sál blokuje ${hallBlocker.title} (${hallBlocker.start}-${hallBlocker.end})`
+                                  : trainerBooking
+                                    ? `${trainerBooking.title} (${trainerBooking.start}-${trainerBooking.end})`
+                                    : undefined
+                              }
+                              type="button"
+                            >
+                              {currentTimeOffset !== null ? (
+                                <span
+                                  aria-hidden="true"
+                                  className="current-time-marker pointer-events-none absolute left-0 right-0 flex items-center"
+                                  style={{ top: `${currentTimeOffset}%` }}
+                                >
+                                  <span className="time-marker-dot h-2 w-2 -translate-x-1 rounded-full bg-[#0b4d76] shadow-[0_0_0_3px_rgba(143,215,172,0.55)]" />
+                                  <span className="time-marker-line h-[2px] flex-1 bg-[#0b4d76] shadow-[0_1px_4px_rgba(0,55,88,0.35)]" />
+                                </span>
+                              ) : null}
+                              {!isOpen ? (
+                                <span className="font-semibold">Zavřeno</span>
+                              ) : hallBlocker ? (
+                                <span className="relative z-10 block max-w-full overflow-hidden">
+                                  <span className="block truncate font-semibold">
+                                    Sál obsazený
+                                  </span>
+                                  <span className="mt-0.5 block truncate">
+                                    {hallBlocker.title}
+                                  </span>
+                                </span>
+                              ) : trainerBooking ? (
+                                <span className="relative z-10 block max-w-full overflow-hidden">
+                                  <span className="block truncate font-semibold">
+                                    {trainerBooking.title}
+                                  </span>
+                                  <span className="mt-0.5 block truncate">
+                                    {trainerBooking.start}-{trainerBooking.end}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#edf7ef] px-2 py-1 font-medium text-[#246043]">
+                                  <Check size={13} />
+                                  Volno
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {activeAppMode === "hall" ? (
           <div className="calendar-view-transition lg:hidden" key={`mobile-${viewMode}`}>
             <MobileCalendarSummary
               bookingDayCounts={bookingDayCounts}
@@ -779,7 +1244,9 @@ export function BookingDashboard({
               viewMode={viewMode}
             />
           </div>
+          ) : null}
 
+          {activeAppMode === "hall" ? (
           <div className="calendar-view-transition hidden lg:block" key={`desktop-${viewMode}`}>
           {viewMode === "today" ? (
             <div className="overflow-hidden rounded-lg border border-[#ded6c9] bg-white">
@@ -814,13 +1281,19 @@ export function BookingDashboard({
                       selectedDate,
                       time,
                     );
-                    const slotFill = getSlotFill(time, booking, cleanupBooking);
+                    const slotFill = getSlotFill(
+                      time,
+                      booking,
+                      cleanupBooking,
+                      activeSlotMinutes,
+                    );
                     const currentTimeOffset =
                       selectedDate === currentDateKey && currentTimeMinutes !== null
                         ? getCurrentTimeOffset(
                             selectedDateObject,
                             time,
                             currentTimeMinutes,
+                            activeSlotMinutes,
                           )
                         : null;
 
@@ -974,10 +1447,16 @@ export function BookingDashboard({
                           time,
                           booking,
                           cleanupBooking,
+                          activeSlotMinutes,
                         );
                         const currentTimeOffset =
                           dateKey === currentDateKey && currentTimeMinutes !== null
-                            ? getCurrentTimeOffset(day, time, currentTimeMinutes)
+                            ? getCurrentTimeOffset(
+                                day,
+                                time,
+                                currentTimeMinutes,
+                                activeSlotMinutes,
+                              )
                             : null;
                         return (
                           <button
@@ -1147,11 +1626,17 @@ export function BookingDashboard({
                             time,
                             booking,
                             cleanupBooking,
+                            activeSlotMinutes,
                           );
                           const currentTimeOffset =
                             dateKey === currentDateKey &&
                             currentTimeMinutes !== null
-                              ? getCurrentTimeOffset(day, time, currentTimeMinutes)
+                              ? getCurrentTimeOffset(
+                                  day,
+                                  time,
+                                  currentTimeMinutes,
+                                  activeSlotMinutes,
+                                )
                               : null;
 
                           return (
@@ -1255,6 +1740,7 @@ export function BookingDashboard({
             </div>
           )}
           </div>
+          ) : null}
         </div>
 
         <aside className={`flex flex-col gap-5 lg:max-h-[min(760px,calc(100svh-112px))] lg:overflow-y-auto lg:pr-1 ${
@@ -1333,7 +1819,7 @@ export function BookingDashboard({
                           value={segment.trainer ?? ""}
                         >
                           <option value="">Bez trenéra</option>
-                          {trainerOptions.map((trainer) => (
+                          {availableTrainers.map((trainer) => (
                             <option key={trainer} value={trainer}>
                               {trainer}
                             </option>
@@ -1441,7 +1927,11 @@ export function BookingDashboard({
           }`}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold">Rezervace sálu</h2>
+                <h2 className="text-xl font-semibold">
+                  {activeAppMode === "lessons"
+                    ? "Rezervace individuální lekce"
+                    : "Rezervace sálu"}
+                </h2>
                 <p className="mt-1 text-sm leading-6 text-[#66706f]">
                   Vkládání rezervací je dostupné jen po přihlášení oprávněného uživatele.
                 </p>
@@ -1471,13 +1961,24 @@ export function BookingDashboard({
                 </div>
 
                 <div className="grid gap-3">
-                  <Field icon={<User size={16} />} label="Název / pořadatel">
+                  <Field
+                    icon={<User size={16} />}
+                    label={
+                      activeAppMode === "lessons"
+                        ? "Taneční pár"
+                        : "Název / pořadatel"
+                    }
+                  >
                     <input
                       className="field-input"
                       onChange={(event) =>
                         updateRequest("name", event.target.value)
                       }
-                      placeholder="Kurz, workshop nebo jmeno poradatele"
+                      placeholder={
+                        activeAppMode === "lessons"
+                          ? "Jména tanečního páru"
+                          : "Kurz, workshop nebo jmeno poradatele"
+                      }
                       required
                       value={request.name}
                     />
@@ -1519,34 +2020,44 @@ export function BookingDashboard({
                         value={request.end}
                       />
                     </label>
-                    <label className="field-label col-span-2">
-                      Typ
-                      <select
-                        className="field-input mt-1"
-                        onChange={(event) =>
-                          updateRequest("eventType", event.target.value)
-                        }
-                        value={request.eventType}
-                      >
-
-                        <option value="tanecni-lekce">Lekce</option>
-                        <option value="workshop">Seminář</option>
-                        <option value="spolecenska-akce">Akce na sále</option>
-                        <option value="blokace">Blokace</option>
-                      </select>
-                    </label>
-                    {request.eventType === "tanecni-lekce" ? (
+                    {activeAppMode === "hall" ? (
+                      <label className="field-label col-span-2">
+                        Typ
+                        <select
+                          className="field-input mt-1"
+                          onChange={(event) =>
+                            updateRequest("eventType", event.target.value)
+                          }
+                          value={request.eventType}
+                        >
+                          <option value="tanecni-lekce">Lekce</option>
+                          <option value="workshop">Seminář</option>
+                          <option value="spolecenska-akce">Akce na sále</option>
+                          <option value="blokace">Blokace</option>
+                        </select>
+                      </label>
+                    ) : (
+                      <div className="col-span-2 rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 py-2 text-sm font-semibold text-[#43504f]">
+                        Individuální lekce · sloty po 45 minutách
+                      </div>
+                    )}
+                    {request.eventType === "tanecni-lekce" ||
+                    activeAppMode === "lessons" ? (
                       <label className="field-label col-span-2">
                         Trenér
                         <select
                           className="field-input mt-1"
-                          onChange={(event) =>
-                            updateRequest("trainer", event.target.value)
-                          }
+                          onChange={(event) => {
+                            updateRequest("trainer", event.target.value);
+                            if (activeAppMode === "lessons") {
+                              setSelectedLessonTrainer(event.target.value);
+                            }
+                          }}
+                          required={activeAppMode === "lessons"}
                           value={request.trainer}
                         >
                           <option value="">Bez vybraného trenéra</option>
-                          {trainerOptions.map((trainer) => (
+                          {availableTrainers.map((trainer) => (
                             <option key={trainer} value={trainer}>
                               {trainer}
                             </option>
@@ -1568,6 +2079,7 @@ export function BookingDashboard({
                     />
                   </label>
 
+                  {activeAppMode === "hall" ? (
                   <label className="flex items-start gap-3 rounded-md border border-[#ded6c9] bg-[#fcfaf6] p-3 text-sm font-semibold text-[#43504f]">
                     <input
                       checked={Boolean(request.cleanupRequired)}
@@ -1585,6 +2097,7 @@ export function BookingDashboard({
                       </span>
                     </span>
                   </label>
+                  ) : null}
                 </div>
 
                 {submitMessage ? (
@@ -1647,4 +2160,38 @@ export function BookingDashboard({
         </aside>
     </SiteShell>
   );
+}
+
+function findOverlappingBooking(
+  bookingList: Booking[],
+  date: string,
+  time: string,
+  slotMinutes: number,
+) {
+  const slotStart = timeToMinutes(time);
+  const slotEnd = slotStart + slotMinutes;
+
+  return bookingList.find((booking) => {
+    if (booking.date !== date) {
+      return false;
+    }
+
+    return timeToMinutes(booking.start) < slotEnd && timeToMinutes(booking.end) > slotStart;
+  });
+}
+
+function addMinutesToTime(time: string, minutesToAdd: number) {
+  return minutesToTime(timeToMinutes(time) + minutesToAdd);
+}
+
+function timeToMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }

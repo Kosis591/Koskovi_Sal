@@ -1,4 +1,5 @@
 export type BookingStatus = "confirmed" | "maintenance";
+export type BookingKind = "hall" | "individual-lesson";
 
 export type Booking = {
   cleanedAt?: string;
@@ -7,6 +8,7 @@ export type Booking = {
   createdAt?: string;
   createdBy?: string;
   id: string;
+  bookingKind?: BookingKind;
   title: string;
   organizer: string;
   date: string;
@@ -26,6 +28,7 @@ export type BookingRequest = {
   start: string;
   end: string;
   eventType: string;
+  bookingKind?: BookingKind;
   trainer?: string;
   note: string;
   cleanupRequired?: boolean;
@@ -87,7 +90,7 @@ export const bookings: Booking[] = [
   },
 ];
 
-export function createTimeSlots() {
+export function createTimeSlots(slotMinutes = hallSettings.slotMinutes) {
   const slots: string[] = [];
   const starts = hallSettings.openingHours.map((hours) =>
     timeToMinutes(hours.start),
@@ -99,7 +102,7 @@ export function createTimeSlots() {
   for (
     let minutes = firstSlot;
     minutes < lastSlot;
-    minutes += hallSettings.slotMinutes
+    minutes += slotMinutes
   ) {
     slots.push(minutesToTime(minutes));
   }
@@ -132,9 +135,14 @@ export function formatDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function isSlotBooked(bookingList: Booking[], date: string, time: string) {
+export function isSlotBooked(
+  bookingList: Booking[],
+  date: string,
+  time: string,
+  slotMinutes = hallSettings.slotMinutes,
+) {
   const slotStart = timeToMinutes(time);
-  const slotEnd = slotStart + hallSettings.slotMinutes;
+  const slotEnd = slotStart + slotMinutes;
 
   return bookingList.find((booking) => {
     const bookingStart = timeToMinutes(booking.start);
@@ -152,8 +160,9 @@ export function getPendingCleanupBooking(
   bookingList: Booking[],
   date: string,
   time: string,
+  slotMinutes = hallSettings.slotMinutes,
 ) {
-  const hasRealBooking = isSlotBooked(bookingList, date, time);
+  const hasRealBooking = isSlotBooked(bookingList, date, time, slotMinutes);
 
   if (hasRealBooking) {
     return undefined;

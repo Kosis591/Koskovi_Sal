@@ -135,6 +135,7 @@ export function isRecurringBookingId(bookingId: string) {
 export function getDayAvailabilitySegments(
   dateKey: string,
   bookingList: Booking[],
+  slotMinutes = hallSettings.slotMinutes,
 ): DayAvailabilitySegment[] {
   const date = new Date(`${dateKey}T12:00:00`);
   const openingHours = getOpeningHoursForDate(date);
@@ -151,17 +152,20 @@ export function getDayAvailabilitySegments(
   }
 
   const segments: DayAvailabilitySegment[] = [];
-  const slots = createTimeSlots().filter((time) => isSlotOpen(date, time));
+  const slots = createTimeSlots(slotMinutes).filter((time) =>
+    isSlotOpen(date, time),
+  );
 
   for (const slot of slots) {
     if (slot < openingHours.start || slot >= openingHours.end) {
       continue;
     }
 
-    const slotEnd = minTime(addMinutes(slot, hallSettings.slotMinutes), openingHours.end);
-    const booking = isSlotBooked(bookingList, dateKey, slot);
-    const cleanupBooking =
-      !booking ? getPendingCleanupBooking(bookingList, dateKey, slot) : undefined;
+    const slotEnd = minTime(addMinutes(slot, slotMinutes), openingHours.end);
+    const booking = isSlotBooked(bookingList, dateKey, slot, slotMinutes);
+    const cleanupBooking = !booking
+      ? getPendingCleanupBooking(bookingList, dateKey, slot, slotMinutes)
+      : undefined;
     const nextSegment: DayAvailabilitySegment = booking
       ? {
           bookingId: booking.id,
@@ -242,6 +246,7 @@ export function getCurrentTimeOffset(
   date: Date,
   slotStart: string,
   currentMinutes: number,
+  slotMinutes = hallSettings.slotMinutes,
 ) {
   const openingHours = getOpeningHoursForDate(date);
 
@@ -250,7 +255,7 @@ export function getCurrentTimeOffset(
   }
 
   const start = timeToMinutes(slotStart);
-  const end = start + hallSettings.slotMinutes;
+  const end = start + slotMinutes;
   const dayStart = timeToMinutes(openingHours.start);
   const dayEnd = timeToMinutes(openingHours.end);
 
@@ -266,13 +271,14 @@ export function getCurrentTimeOffset(
     return null;
   }
 
-  return ((currentMinutes - start) / hallSettings.slotMinutes) * 100;
+  return ((currentMinutes - start) / slotMinutes) * 100;
 }
 
 export function getSlotFill(
   slotStart: string,
   booking?: Booking,
   cleanupBooking?: Booking,
+  slotMinutes = hallSettings.slotMinutes,
 ) {
   const source = booking ?? cleanupBooking;
 
@@ -281,7 +287,7 @@ export function getSlotFill(
   }
 
   const slotStartMinutes = timeToMinutes(slotStart);
-  const slotEndMinutes = slotStartMinutes + hallSettings.slotMinutes;
+  const slotEndMinutes = slotStartMinutes + slotMinutes;
   const sourceStart = booking
     ? timeToMinutes(booking.start)
     : slotStartMinutes;
@@ -291,7 +297,7 @@ export function getSlotFill(
   const overlapStart = Math.max(slotStartMinutes, sourceStart);
   const overlapEnd = Math.min(slotEndMinutes, sourceEnd);
   const width =
-    ((overlapEnd - overlapStart) / hallSettings.slotMinutes) * 100;
+    ((overlapEnd - overlapStart) / slotMinutes) * 100;
 
   if (width <= 0) {
     return null;
@@ -301,7 +307,7 @@ export function getSlotFill(
     className: booking
       ? slotFillStyles[booking.status]
       : slotFillStyles.cleanup,
-    left: ((overlapStart - slotStartMinutes) / hallSettings.slotMinutes) * 100,
+    left: ((overlapStart - slotStartMinutes) / slotMinutes) * 100,
     width,
   };
 }

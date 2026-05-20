@@ -5,6 +5,8 @@ export const adminSessionCookie = "koskovi_admin_session";
 
 const devPassword = "koskovi-admin";
 const devSecret = "local-development-session-secret";
+const tkkoskoviPasswordHash =
+  "scrypt$edfc92fc532a431fa231838459a9c76e$7be5af62f56492c90bed41766bc93bc6e6ac8a461f120f2d0e5e8f1da317dbcf787a1135c9f688e5422bcea44a1e86e13d13619e3e87c10c58c45b83433b981d";
 
 type AdminCredential = {
   password?: string;
@@ -32,6 +34,11 @@ function getAdminCredentials(): AdminCredential[] {
     {
       username: "Pepe",
       passwordHash: process.env.ADMIN_PEPE_PASSWORD_HASH,
+    },
+    {
+      username: "TKKoskovi",
+      passwordHash:
+        process.env.ADMIN_TKKOSKOVI_PASSWORD_HASH ?? tkkoskoviPasswordHash,
     },
   ];
 }

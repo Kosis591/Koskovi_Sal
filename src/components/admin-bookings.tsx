@@ -28,6 +28,7 @@ type RecurringTrainingLabel = {
 };
 
 const bookingsPerPage = 8;
+type AdminMobileView = "menu" | "trainers" | "bookings" | "undo";
 
 export function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -44,6 +45,7 @@ export function AdminBookings() {
   const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
   const [undoingTimestamp, setUndoingTimestamp] = useState("");
   const [message, setMessage] = useState("");
+  const [mobileView, setMobileView] = useState<AdminMobileView>("menu");
 
   const loadAuditLog = useCallback(async () => {
     const response = await fetch("/api/audit-log", { cache: "no-store" });
@@ -237,6 +239,13 @@ export function AdminBookings() {
     }
   }
 
+  function showMobileView(nextView: AdminMobileView) {
+    setMobileView(nextView);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ behavior: "smooth", top: 0 });
+    });
+  }
+
   return (
     <SiteShell
       actions={
@@ -317,24 +326,33 @@ export function AdminBookings() {
             </div>
 
             <nav className="mt-4 grid gap-2 sm:grid-cols-3">
-              <a
-                className="inline-flex min-h-12 items-center justify-center rounded-md bg-[#003758] px-3 text-center text-sm font-semibold text-white transition hover:bg-[#0b4d76]"
-                href="#trenery"
+              <button
+                className={getAdminMobileViewButtonClass(
+                  mobileView,
+                  "trainers",
+                )}
+                onClick={() => showMobileView("trainers")}
+                type="button"
               >
                 Nastavení trenérů na tento týden
-              </a>
-              <a
-                className="inline-flex min-h-12 items-center justify-center rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 text-center text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
-                href="#vsechny-akce"
+              </button>
+              <button
+                className={getAdminMobileViewButtonClass(
+                  mobileView,
+                  "bookings",
+                )}
+                onClick={() => showMobileView("bookings")}
+                type="button"
               >
                 Všechny akce
-              </a>
-              <a
-                className="inline-flex min-h-12 items-center justify-center rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 text-center text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
-                href="#vraceni-akce"
+              </button>
+              <button
+                className={getAdminMobileViewButtonClass(mobileView, "undo")}
+                onClick={() => showMobileView("undo")}
+                type="button"
               >
                 Vrácení smazané akce
-              </a>
+              </button>
             </nav>
 
             {message ? (
@@ -346,9 +364,18 @@ export function AdminBookings() {
           </section>
 
           <section
-            className="scroll-mt-4 rounded-lg border border-[#ded6c9] bg-white p-5"
+            className={`scroll-mt-4 rounded-lg border border-[#ded6c9] bg-white p-5 ${
+              mobileView === "trainers" ? "block" : "hidden lg:block"
+            }`}
             id="trenery"
           >
+            <button
+              className="mb-4 inline-flex h-9 items-center justify-center rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8] lg:hidden"
+              onClick={() => showMobileView("menu")}
+              type="button"
+            >
+              Zpět na výběr
+            </button>
             <div>
               <h2 className="text-xl font-semibold">
                 Trenéři nejbližších tréninků
@@ -426,10 +453,19 @@ export function AdminBookings() {
           </section>
 
           <section
-            className="scroll-mt-4 overflow-hidden rounded-lg border border-[#ded6c9] bg-white"
+            className={`scroll-mt-4 overflow-hidden rounded-lg border border-[#ded6c9] bg-white ${
+              mobileView === "bookings" ? "block" : "hidden lg:block"
+            }`}
             id="vsechny-akce"
           >
             <div className="border-b border-[#ded6c9] px-5 py-4">
+              <button
+                className="mb-4 inline-flex h-9 items-center justify-center rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8] lg:hidden"
+                onClick={() => showMobileView("menu")}
+                type="button"
+              >
+                Zpět na výběr
+              </button>
               <h2 className="text-xl font-semibold">Všechny akce</h2>
               <p className="mt-1 text-sm text-[#66706f]">
                 Zobrazeno {paginatedBookings.length} z {bookings.length} akcí.
@@ -637,10 +673,19 @@ export function AdminBookings() {
 
           {sessionUsername ? (
             <section
-              className="scroll-mt-4 overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:col-span-2"
+              className={`scroll-mt-4 overflow-hidden rounded-lg border border-[#ded6c9] bg-white lg:col-span-2 ${
+                mobileView === "undo" ? "block" : "hidden lg:block"
+              }`}
               id="vraceni-akce"
             >
               <div className="border-b border-[#ded6c9] px-5 py-4">
+                <button
+                  className="mb-4 inline-flex h-9 items-center justify-center rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8] lg:hidden"
+                  onClick={() => showMobileView("menu")}
+                  type="button"
+                >
+                  Zpět na výběr
+                </button>
                 <h2 className="text-xl font-semibold">
                   {sessionUsername === "kosis"
                     ? "Log operací"
@@ -712,6 +757,20 @@ function formatAuditAction(action: string) {
   };
 
   return labels[action] ?? action;
+}
+
+function getAdminMobileViewButtonClass(
+  currentView: AdminMobileView,
+  targetView: Exclude<AdminMobileView, "menu">,
+) {
+  const baseClass =
+    "inline-flex min-h-12 items-center justify-center rounded-md px-3 text-center text-sm font-semibold transition";
+
+  if (currentView === targetView) {
+    return `${baseClass} border border-[#003758] bg-[#003758] text-white shadow-[0_10px_20px_rgba(0,55,88,0.22)] hover:bg-[#0b4d76]`;
+  }
+
+  return `${baseClass} border border-[#ded6c9] bg-[#fcfaf6] text-[#003758] hover:bg-[#f6f1e8]`;
 }
 
 function formatBookingStatus(booking: Booking) {

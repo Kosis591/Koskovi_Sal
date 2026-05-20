@@ -27,6 +27,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (payload.bookingKind === "individual-lesson" && !payload.trainer) {
+    return NextResponse.json(
+      { message: "Pro individuální lekci vyber trenéra." },
+      { status: 400 },
+    );
+  }
+
   const result = await createBooking({
     title: payload.name,
     organizer: payload.name,
@@ -34,6 +41,8 @@ export async function POST(request: NextRequest) {
     start: payload.start,
     end: payload.end,
     cleanupRequired: Boolean(payload.cleanupRequired),
+    bookingKind:
+      payload.bookingKind === "individual-lesson" ? "individual-lesson" : "hall",
     createdBy: actor,
     status: payload.eventType === "blokace" ? "maintenance" : "confirmed",
     trainer: payload.trainer,
