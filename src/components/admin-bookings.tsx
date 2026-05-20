@@ -314,6 +314,19 @@ export function AdminBookings() {
             Přihlásit
           </button>
         </form>
+      ) : sessionUsername?.toLocaleLowerCase("cs-CZ") === "tkkoskovi" ? (
+        <section className="rounded-lg border border-[#ded6c9] bg-white p-5 lg:col-span-2 lg:max-w-xl">
+          <h2 className="text-xl font-semibold">Správa není dostupná</h2>
+          <p className="mt-2 text-sm leading-6 text-[#66706f]">
+            Účet TKKoskovi slouží pouze k nahlížení do individuálních lekcí.
+          </p>
+          <Link
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76]"
+            href="/"
+          >
+            Zpět na individuální lekce
+          </Link>
+        </section>
       ) : (
         <>
           <section className="rounded-lg border border-[#ded6c9] bg-white p-5 lg:col-span-2">
@@ -325,7 +338,7 @@ export function AdminBookings() {
               </p>
             </div>
 
-            <nav className="mt-4 grid gap-2 sm:grid-cols-3">
+            <nav className="mt-4 grid gap-2 sm:grid-cols-3 lg:hidden">
               <button
                 className={getAdminMobileViewButtonClass(
                   mobileView,

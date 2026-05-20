@@ -97,6 +97,10 @@ export function getAdminRequestUsername(cookies: ReadonlyRequestCookies) {
   return getAdminUsernameFromSession(cookies.get(adminSessionCookie)?.value);
 }
 
+export function isReadOnlyLessonUsername(username: string | null | undefined) {
+  return normalizeUsername(username ?? "") === "tkkoskovi";
+}
+
 function signSession(sessionId: string, username: string) {
   return createHmac("sha256", getSessionSecret())
     .update(`${sessionId}.${username}`)

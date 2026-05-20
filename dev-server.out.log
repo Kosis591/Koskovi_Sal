@@ -9,17 +9,15 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1698ms
- ○ Compiling /admin ...
- ✓ Compiled /admin in 3.9s (713 modules)
- GET /admin 200 in 4358ms
- ✓ Compiled /api/auth/session in 290ms (442 modules)
- ✓ Compiled in 523ms (280 modules)
- GET /favicon.ico 200 in 1053ms
- GET /api/auth/session 200 in 985ms
- GET /admin 200 in 242ms
- ✓ Compiled /api/recurring-trainers in 442ms (729 modules)
- GET /api/recurring-trainers 200 in 577ms
- GET /api/bookings 200 in 585ms
- ✓ Compiled /api/audit-log in 222ms (731 modules)
- GET /api/audit-log 200 in 263ms
+ ✓ Ready in 1969ms
+ ○ Compiling /api/availability ...
+ ✓ Compiled /api/availability in 2s (302 modules)
+ GET /api/availability 200 in 2227ms
+ GET /api/availability 200 in 2240ms
+ GET /api/availability 200 in 28ms
+ GET /api/availability 200 in 19ms
+ GET /api/availability 200 in 20ms
+ GET /api/availability 200 in 19ms
+ GET /api/availability 200 in 20ms
+ GET /api/availability 200 in 21ms
+ GET /api/availability 200 in 25ms

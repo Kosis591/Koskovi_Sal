@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { appendAuditLog } from "@/lib/audit-log";
-import { getAdminRequestUsername, isAdminRequest } from "@/lib/auth";
+import {
+  getAdminRequestUsername,
+  isAdminRequest,
+  isReadOnlyLessonUsername,
+} from "@/lib/auth";
 import { createBooking } from "@/lib/bookings-db";
 import type { BookingRequest } from "@/lib/schedule";
 
@@ -15,6 +19,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { message: "Pro vytvoření rezervace je nutné přihlášení." },
       { status: 401 },
+    );
+  }
+
+  if (isReadOnlyLessonUsername(actor)) {
+    return NextResponse.json(
+      { message: "Tento účet má individuální lekce pouze pro čtení." },
+      { status: 403 },
     );
   }
 

@@ -1,13 +1,20 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { appendAuditLog } from "@/lib/audit-log";
-import { getAdminRequestUsername, isAdminRequest } from "@/lib/auth";
+import {
+  getAdminRequestUsername,
+  isAdminRequest,
+  isReadOnlyLessonUsername,
+} from "@/lib/auth";
 import { createBooking, getBookings, type BookingInput } from "@/lib/bookings-db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!isAdminRequest(await cookies())) {
+  const cookieStore = await cookies();
+  const actor = getAdminRequestUsername(cookieStore);
+
+  if (!isAdminRequest(cookieStore) || isReadOnlyLessonUsername(actor)) {
     return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
   }
 
@@ -27,6 +34,13 @@ export async function POST(request: NextRequest) {
 
   if (!isAdminRequest(cookieStore)) {
     return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
+  }
+
+  if (isReadOnlyLessonUsername(actor)) {
+    return NextResponse.json(
+      { message: "Tento účet nemá přístup ke správě akcí." },
+      { status: 403 },
+    );
   }
 
   const input = (await request.json()) as BookingInput;
@@ -59,9 +73,9 @@ export async function POST(request: NextRequest) {
       actor,
       bookingId: result.booking.id,
       details: {
+        booking: result.booking,
         date: result.booking.date,
         end: result.booking.end,
-        booking: result.booking,
         start: result.booking.start,
         title: result.booking.title,
       },

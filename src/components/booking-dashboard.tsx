@@ -102,6 +102,13 @@ type BookingDashboardProps = {
 };
 
 type AppMode = "hall" | "lessons";
+type ImportedLesson = {
+  dateOrDay: string;
+  end: string;
+  name: string;
+  start: string;
+  trainer: string;
+};
 
 export function BookingDashboard({
   initialBookings,
@@ -136,6 +143,12 @@ export function BookingDashboard({
   const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
   const [trainerMessage, setTrainerMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pastedLessonTable, setPastedLessonTable] = useState("");
+  const [storedImportedLessons, setStoredImportedLessons] = useState<
+    ImportedLesson[]
+  >([]);
+  const [importMessage, setImportMessage] = useState("");
+  const [isSavingImport, setIsSavingImport] = useState(false);
   const [calendarBookings, setCalendarBookings] =
     useState<Booking[]>(initialBookings);
   const [recurringCancellations, setRecurringCancellations] = useState(
@@ -144,12 +157,18 @@ export function BookingDashboard({
   const [now, setNow] = useState<Date | null>(null);
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
 
+  const normalizedSessionUsername = (sessionUsername ?? "").toLocaleLowerCase("cs-CZ");
+  const isLessonReadOnlyAccount = normalizedSessionUsername === "tkkoskovi";
   const canUseLessonMode =
     isAuthenticated &&
-    ["kosis", "tkkoskovi"].includes(
-      (sessionUsername ?? "").toLocaleLowerCase("cs-CZ"),
-    );
-  const activeAppMode: AppMode = canUseLessonMode ? appMode : "hall";
+    ["kosis", "tkkoskovi"].includes(normalizedSessionUsername);
+  const activeAppMode: AppMode = isLessonReadOnlyAccount
+    ? "lessons"
+    : canUseLessonMode
+      ? appMode
+      : "hall";
+  const canManageBookings = isAuthenticated && !isLessonReadOnlyAccount;
+  const canSaveImportedLessons = normalizedSessionUsername === "kosis";
   const activeSlotMinutes =
     activeAppMode === "lessons" ? 45 : hallSettings.slotMinutes;
   const timeSlots = useMemo(
@@ -222,6 +241,14 @@ export function BookingDashboard({
         `${left.date}${left.start}`.localeCompare(`${right.date}${right.start}`),
       );
   }, [activeLessonTrainer, days, lessonBookings]);
+  const importedLessons = useMemo(
+    () => parsePastedLessonTable(pastedLessonTable, availableTrainers),
+    [availableTrainers, pastedLessonTable],
+  );
+  const displayedImportedLessons =
+    pastedLessonTable && importedLessons.length > 0
+      ? importedLessons
+      : storedImportedLessons;
   const visibleDateKeys = useMemo(() => {
     const keys = new Set<string>([todayDateKey]);
 
@@ -355,6 +382,20 @@ export function BookingDashboard({
     setRecurringCancellations(data.recurringCancellations ?? []);
   }, []);
 
+  const loadImportedLessons = useCallback(async () => {
+    const response = await fetch("/api/individual-lessons", {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      setStoredImportedLessons([]);
+      return;
+    }
+
+    const data = (await response.json()) as { lessons: ImportedLesson[] };
+    setStoredImportedLessons(data.lessons ?? []);
+  }, []);
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setSelectedDate(todayDateKey);
@@ -412,6 +453,18 @@ export function BookingDashboard({
       document.removeEventListener("visibilitychange", syncWhenVisible);
     };
   }, [syncCalendar]);
+
+  useEffect(() => {
+    if (canUseLessonMode) {
+      const timeout = window.setTimeout(() => {
+        void loadImportedLessons();
+      }, 0);
+
+      return () => window.clearTimeout(timeout);
+    }
+
+    return undefined;
+  }, [canUseLessonMode, loadImportedLessons]);
 
   function updateRequest(field: keyof BookingRequest, value: string) {
     setSubmitMessage("");
@@ -685,6 +738,34 @@ export function BookingDashboard({
     }
   }
 
+  async function handleSaveImportedLessons() {
+    setImportMessage("");
+    setIsSavingImport(true);
+
+    try {
+      const response = await fetch("/api/individual-lessons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessons: importedLessons }),
+      });
+      const data = (await response.json()) as {
+        lessons?: ImportedLesson[];
+        message?: string;
+      };
+
+      if (!response.ok) {
+        setImportMessage(data.message ?? "Import se nepodařilo uložit.");
+        return;
+      }
+
+      setStoredImportedLessons(data.lessons ?? importedLessons);
+      setPastedLessonTable("");
+      setImportMessage(data.message ?? "Rozpis je uložený.");
+    } finally {
+      setIsSavingImport(false);
+    }
+  }
+
   return (
     <SiteShell
       maxWidthClassName="max-w-[1840px]"
@@ -700,6 +781,7 @@ export function BookingDashboard({
       }
       eyebrow={
         <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[#d7e6ed]">
+          {!isLessonReadOnlyAccount ? (
           <button
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
               activeAppMode === "hall"
@@ -718,6 +800,7 @@ export function BookingDashboard({
             <Sparkles size={15} />
             Rezervace sálu
           </button>
+          ) : null}
           {canUseLessonMode ? (
             <button
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
@@ -794,7 +877,7 @@ export function BookingDashboard({
             <div>
               <h2 className="text-xl font-semibold">
                 {activeAppMode === "lessons"
-                  ? `Individuální lekce - ${activeLessonTrainer}`
+                  ? "Individuální lekce"
                   : viewMode === "today"
                   ? `Denní dostupnost - ${dayFormatter.format(selectedDateObject)}`
                   : viewMode === "week"
@@ -805,7 +888,7 @@ export function BookingDashboard({
               </h2>
               <p className="mt-1 text-sm text-[#66706f]">
                 {activeAppMode === "lessons"
-                  ? "Testovací režim pro individuální lekce používá stejné otevírací časy a 45minutové sloty."
+                  ? "Rozpis pro soustředění se vytváří importem z Excelu."
                   : viewMode === "week"
                     ? "Kliknutím na den zobrazíš rychlý detail a volné časy."
                     : "Dny jsou pod sebou, časy najdeš v horní hlavičce tabulky."}
@@ -878,6 +961,7 @@ export function BookingDashboard({
               ) : null}
               <div className="flex w-full items-center gap-3 sm:w-auto">
                 <ThemeToggle />
+                {activeAppMode === "hall" ? (
                 <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-[#ded6c9] bg-white sm:flex-none">
                   <button
                     aria-label={
@@ -915,10 +999,11 @@ export function BookingDashboard({
                     <ChevronRight size={18} />
                   </button>
                 </div>
+                ) : null}
               </div>
             </div>
           </div>
-          {isAuthenticated ? (
+          {canManageBookings ? (
             <div className="rounded-md border border-[#ded6c9] bg-white px-3 py-2 text-sm text-[#66706f]">
                 Jsi přihlášen jako: {sessionUsername ?? "uživatel"}
               <Link
@@ -930,7 +1015,7 @@ export function BookingDashboard({
             </div>
           ) : null}
 
-          {activeAppMode === "lessons" ? (
+          {false && activeAppMode === "lessons" ? (
             <div className="calendar-view-transition grid gap-4 lg:hidden">
               <div className="rounded-lg border border-[#ded6c9] bg-white p-3">
                 <p className="px-1 text-xs font-semibold uppercase text-[#66706f]">
@@ -1035,6 +1120,89 @@ export function BookingDashboard({
           ) : null}
 
           {activeAppMode === "lessons" ? (
+            <section className="rounded-lg border border-[#ded6c9] bg-white p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-[#66706f]">
+                    Individuální lekce
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold">
+                    Rozpis ze soustředění
+                  </h3>
+                </div>
+                <span className="rounded-full bg-[#e7f1f6] px-3 py-1 text-xs font-semibold text-[#003758]">
+                  {formatEventCount(displayedImportedLessons.length)}
+                </span>
+              </div>
+
+              {canSaveImportedLessons ? (
+                <>
+                  <textarea
+                    className="field-input mt-4 min-h-28 w-full resize-y"
+                    onChange={(event) => setPastedLessonTable(event.target.value)}
+                    placeholder={
+                      "Zkopíruj oblast z Excelu a vlož ji sem.\nIdeálně sloupce: Datum/den, Čas, Trenér, Pár"
+                    }
+                    value={pastedLessonTable}
+                  />
+                  <button
+                    className="mt-3 inline-flex h-10 items-center justify-center rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={importedLessons.length === 0 || isSavingImport}
+                    onClick={handleSaveImportedLessons}
+                    type="button"
+                  >
+                    {isSavingImport ? "Ukládám..." : "Uložit rozpis z Excelu"}
+                  </button>
+                </>
+              ) : null}
+
+              {importMessage ? (
+                <p className="mt-3 rounded-md border border-[#cde6d9] bg-[#f4fbf7] px-3 py-2 text-sm text-[#245d3f]">
+                  {importMessage}
+                </p>
+              ) : null}
+
+              {displayedImportedLessons.length > 0 ? (
+                  <div className="mt-4 overflow-hidden rounded-md border border-[#ded6c9]">
+                    <div className="grid grid-cols-[1fr_96px_1fr_1.2fr] bg-[#003758] text-xs font-semibold uppercase text-white">
+                      <div className="px-3 py-2">Den</div>
+                      <div className="px-3 py-2">Čas</div>
+                      <div className="px-3 py-2">Trenér</div>
+                      <div className="px-3 py-2">Pár</div>
+                    </div>
+                    {displayedImportedLessons.map((lesson, index) => (
+                      <div
+                        className="grid grid-cols-[1fr_96px_1fr_1.2fr] border-t border-[#ece3d5] text-sm"
+                        key={`${lesson.dateOrDay}-${lesson.start}-${lesson.trainer}-${index}`}
+                      >
+                        <div className="min-w-0 px-3 py-2 font-semibold">
+                          {lesson.dateOrDay}
+                        </div>
+                        <div className="px-3 py-2 text-[#246043]">
+                          {lesson.start}-{lesson.end}
+                        </div>
+                        <div className="min-w-0 px-3 py-2">
+                          {lesson.trainer}
+                        </div>
+                        <div className="min-w-0 px-3 py-2 font-semibold">
+                          {lesson.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : pastedLessonTable ? (
+                  <p className="mt-3 rounded-md border border-[#edd3cc] bg-[#fff0eb] px-3 py-2 text-sm text-[#8c2f20]">
+                    Z vložené tabulky se zatím nepodařilo rozpoznat žádné lekce.
+                  </p>
+                ) : (
+                  <p className="mt-4 rounded-md border border-[#d8eadf] bg-[#f3fbf5] p-4 text-sm text-[#246043]">
+                    Zatím není uložený žádný rozpis individuálních lekcí.
+                  </p>
+                )}
+            </section>
+          ) : null}
+
+          {false && activeAppMode === "lessons" ? (
             <div className="calendar-view-transition hidden gap-4 lg:grid lg:grid-cols-[176px_minmax(0,1fr)]">
               <div className="rounded-lg border border-[#ded6c9] bg-white p-3">
                 <p className="px-1 text-xs font-semibold uppercase text-[#66706f]">
@@ -1844,7 +2012,7 @@ export function BookingDashboard({
                           : "Uklidil jsem sál"}
                       </button>
                     ) : null}
-                    {isAuthenticated &&
+                    {canManageBookings &&
                     segment.kind === "booked" ? (
                       <button
                         className="mt-2 inline-flex min-h-8 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-[#d9a093] bg-[#fff0eb] px-2.5 py-1.5 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#ffe3da] disabled:cursor-not-allowed disabled:opacity-70"
@@ -1922,6 +2090,7 @@ export function BookingDashboard({
             ) : null}
           </div>
 
+          {!isAuthenticated || canManageBookings ? (
           <div className={`rounded-lg border border-[#ded6c9] bg-white p-5 ${
             isAuthenticated ? "lg:order-1" : "lg:order-2"
           }`}>
@@ -1943,7 +2112,7 @@ export function BookingDashboard({
               <div className="mt-5 rounded-md border border-[#e7dfd4] bg-[#fcfaf6] p-3 text-sm text-[#66706f]">
                 Kontroluji přihlášení...
               </div>
-            ) : isAuthenticated ? (
+            ) : canManageBookings ? (
               <form className="mt-5" onSubmit={handleBookingSubmit}>
                 <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-[#d8eadf] bg-[#f3fbf5] p-3 text-sm text-[#245d3f]">
                   <span className="inline-flex items-center gap-2">
@@ -2157,6 +2326,7 @@ export function BookingDashboard({
               </form>
             )}
           </div>
+          ) : null}
         </aside>
     </SiteShell>
   );
@@ -2178,6 +2348,104 @@ function findOverlappingBooking(
 
     return timeToMinutes(booking.start) < slotEnd && timeToMinutes(booking.end) > slotStart;
   });
+}
+
+function parsePastedLessonTable(
+  pastedValue: string,
+  trainers: string[],
+): ImportedLesson[] {
+  const rows = pastedValue
+    .split(/\r?\n/)
+    .map((row) => row.trim())
+    .filter(Boolean)
+    .map((row) => row.split(/\t|;|,/).map((cell) => cell.trim()));
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const firstRow = rows[0].map(normalizeTableHeader);
+  const hasHeader = firstRow.some((cell) =>
+    ["datum", "den", "cas", "od", "trener", "par", "jmeno"].includes(cell),
+  );
+  const header = hasHeader ? firstRow : [];
+  const bodyRows = hasHeader ? rows.slice(1) : rows;
+
+  return bodyRows
+    .map((cells) => {
+      const timeCell =
+        getCellByHeader(cells, header, ["cas", "od"]) ??
+        cells.find((cell) => parseTimeRange(cell));
+      const parsedTime = timeCell ? parseTimeRange(timeCell) : null;
+
+      if (!parsedTime) {
+        return null;
+      }
+
+      const trainer =
+        getCellByHeader(cells, header, ["trener"]) ??
+        cells.find((cell) =>
+          trainers.some(
+            (trainerName) =>
+              normalizeTableHeader(trainerName) === normalizeTableHeader(cell),
+          ),
+        ) ??
+        "";
+      const dateOrDay =
+        getCellByHeader(cells, header, ["datum", "den"]) ??
+        cells.find((cell) => cell !== timeCell && cell !== trainer) ??
+        "";
+      const name =
+        getCellByHeader(cells, header, ["par", "jmeno"]) ??
+        cells
+          .filter((cell) => cell !== timeCell && cell !== trainer && cell !== dateOrDay)
+          .join(" ")
+          .trim();
+
+      if (!trainer || !name) {
+        return null;
+      }
+
+      return {
+        dateOrDay,
+        end: parsedTime.end,
+        name,
+        start: parsedTime.start,
+        trainer,
+      };
+    })
+    .filter((lesson): lesson is ImportedLesson => Boolean(lesson));
+}
+
+function getCellByHeader(
+  cells: string[],
+  header: string[],
+  aliases: string[],
+) {
+  const index = header.findIndex((cell) => aliases.includes(cell));
+
+  return index >= 0 ? cells[index] : undefined;
+}
+
+function parseTimeRange(value: string) {
+  const match = value.match(/(\d{1,2})[:.](\d{2})\s*[-–]\s*(\d{1,2})[:.](\d{2})/);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    end: `${match[3].padStart(2, "0")}:${match[4]}`,
+    start: `${match[1].padStart(2, "0")}:${match[2]}`,
+  };
+}
+
+function normalizeTableHeader(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase("cs-CZ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function addMinutesToTime(time: string, minutesToAdd: number) {
