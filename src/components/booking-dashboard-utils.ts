@@ -3,6 +3,7 @@ import {
   getOpeningHoursForDate,
   getPendingCleanupBooking,
   hallSettings,
+  isDepartureSlot,
   isSlotBooked,
   isSlotOpen,
   type Booking,
@@ -56,7 +57,7 @@ export type DayAvailabilitySegment =
   | {
       description?: string;
       end: string;
-      kind: "free" | "closed" | "cleanup";
+      kind: "free" | "closed" | "cleanup" | "departure";
       cleanupBookingId?: string;
       start: string;
       title: string;
@@ -75,6 +76,7 @@ export type DayAvailabilitySegment =
 export type SlotState = {
   booking?: Booking;
   cleanupBooking?: Booking;
+  isDeparture?: boolean;
   isOpen: boolean;
 };
 
@@ -163,6 +165,7 @@ export function getDayAvailabilitySegments(
 
     const slotEnd = minTime(addMinutes(slot, slotMinutes), openingHours.end);
     const booking = isSlotBooked(bookingList, dateKey, slot, slotMinutes);
+    const isDeparture = isDepartureSlot(date, slot, slotMinutes);
     const cleanupBooking = !booking
       ? getPendingCleanupBooking(bookingList, dateKey, slot, slotMinutes)
       : undefined;
@@ -186,6 +189,13 @@ export function getDayAvailabilitySegments(
             start: slot,
             title: "Čeká na úklid",
           }
+        : isDeparture
+          ? {
+              end: slotEnd,
+              kind: "departure",
+              start: slot,
+              title: "Odchod ze sálu",
+            }
         : {
             end: slotEnd,
             kind: "free",
@@ -218,6 +228,10 @@ export function getDayAvailabilitySegments(
 export function getSegmentStyle(segment: DayAvailabilitySegment) {
   if (segment.kind === "cleanup") {
     return cleanupCellStyle;
+  }
+
+  if (segment.kind === "departure") {
+    return "border-[#e1b554] bg-[#fff6d8] text-[#6a4b00]";
   }
 
   if (segment.kind !== "booked") {

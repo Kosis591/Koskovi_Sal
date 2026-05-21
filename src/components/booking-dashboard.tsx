@@ -63,6 +63,7 @@ import {
   getPendingCleanupBooking,
   getWeekDays,
   hallSettings,
+  isDepartureSlot,
   isSlotBooked,
   isSlotOpen,
   trainerOptions,
@@ -162,11 +163,7 @@ export function BookingDashboard({
   const canUseLessonMode =
     isAuthenticated &&
     ["kosis", "tkkoskovi"].includes(normalizedSessionUsername);
-  const activeAppMode: AppMode = isLessonReadOnlyAccount
-    ? "lessons"
-    : canUseLessonMode
-      ? appMode
-      : "hall";
+  const activeAppMode: AppMode = canUseLessonMode ? appMode : "hall";
   const canManageBookings = isAuthenticated && !isLessonReadOnlyAccount;
   const canSaveImportedLessons = normalizedSessionUsername === "kosis";
   const activeSlotMinutes =
@@ -290,6 +287,7 @@ export function BookingDashboard({
 
       for (const time of timeSlots) {
         const isOpen = isSlotOpen(date, time);
+        const isDeparture = isDepartureSlot(date, time, activeSlotMinutes);
         const booking = isSlotBooked(
           activeModeBookings,
           dateKey,
@@ -309,6 +307,7 @@ export function BookingDashboard({
         states.set(getSlotStateKey(dateKey, time), {
           booking,
           cleanupBooking,
+          isDeparture,
           isOpen,
         });
       }
@@ -330,7 +329,10 @@ export function BookingDashboard({
       const slotState = slotStateMap.get(getSlotStateKey(selectedDate, time));
 
       return Boolean(
-        slotState?.isOpen && !slotState.booking && !slotState.cleanupBooking,
+        slotState?.isOpen &&
+          !slotState.isDeparture &&
+          !slotState.booking &&
+          !slotState.cleanupBooking,
       );
     }),
     [selectedDate, slotStateMap, timeSlots],
@@ -349,6 +351,7 @@ export function BookingDashboard({
     slotStateMap.get(getSlotStateKey(dateKey, time)) ?? {
       booking: undefined,
       cleanupBooking: undefined,
+      isDeparture: false,
       isOpen: false,
     };
   const getLessonSlotState = (trainer: string, dateKey: string, time: string) => {
@@ -781,7 +784,6 @@ export function BookingDashboard({
       }
       eyebrow={
         <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[#d7e6ed]">
-          {!isLessonReadOnlyAccount ? (
           <button
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
               activeAppMode === "hall"
@@ -800,7 +802,6 @@ export function BookingDashboard({
             <Sparkles size={15} />
             Rezervace sálu
           </button>
-          ) : null}
           {canUseLessonMode ? (
             <button
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
@@ -1445,7 +1446,7 @@ export function BookingDashboard({
                   </div>
 
                   {timeSlots.map((time) => {
-                    const { booking, cleanupBooking, isOpen } = getSlotState(
+                    const { booking, cleanupBooking, isDeparture, isOpen } = getSlotState(
                       selectedDate,
                       time,
                     );
@@ -1481,13 +1482,15 @@ export function BookingDashboard({
                                 ? `${getBookingCellStyle(booking, slotFill, true)} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                 : cleanupBooking
                                   ? `${cleanupCellStyle} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]`
+                                  : isDeparture
+                                    ? "relative z-10 bg-[#fff6d8] text-[#6a4b00] ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.14),inset_0_3px_0_rgba(255,255,255,0.62)]"
                                   : "selected-period-cell relative z-10 bg-[#eef7fb] text-[#17475f] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.78),inset_0_-3px_0_rgba(11,77,118,0.14)] hover:bg-[#e5f2f8]"
                           }`}
                           data-current-slot={
                             currentTimeOffset !== null ? "true" : undefined
                           }
                           onClick={() => {
-                            if (isOpen && !booking && !cleanupBooking) {
+                            if (isOpen && !isDeparture && !booking && !cleanupBooking) {
                               updateRequest("date", selectedDate);
                               updateRequest("start", time);
                             }
@@ -1497,6 +1500,8 @@ export function BookingDashboard({
                               ? `${booking.title} (${booking.start}-${booking.end})`
                               : cleanupBooking
                                 ? `Čeká na úklid po akci ${cleanupBooking.title}`
+                                : isDeparture
+                                  ? "Odchod ze sálu před zavíračkou"
                               : undefined
                           }
                           type="button"
@@ -1539,6 +1544,15 @@ export function BookingDashboard({
                               </span>
                               <span className="mt-1 block max-w-full truncate leading-4">
                                 Po akci {cleanupBooking.title}
+                              </span>
+                            </span>
+                          ) : isDeparture ? (
+                            <span className="relative z-10 block max-w-full overflow-hidden">
+                              <span className="block truncate font-semibold">
+                                Odchod ze sálu
+                              </span>
+                              <span className="mt-1 block truncate leading-4">
+                                30 min před zavíračkou
                               </span>
                             </span>
                           ) : (
@@ -1609,7 +1623,7 @@ export function BookingDashboard({
                       {days.map((day) => {
                         const dateKey = formatDateKey(day);
                         const isSelected = dateKey === selectedDate;
-                        const { booking, cleanupBooking, isOpen } =
+                        const { booking, cleanupBooking, isDeparture, isOpen } =
                           getSlotState(dateKey, time);
                         const slotFill = getSlotFill(
                           time,
@@ -1645,6 +1659,10 @@ export function BookingDashboard({
                                             ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
                                             : ""
                                         }`
+                                      : isDeparture
+                                        ? isSelected
+                                          ? "relative z-10 bg-[#fff6d8] text-[#6a4b00] ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.14),inset_0_3px_0_rgba(255,255,255,0.62)]"
+                                          : "bg-[#fff6d8] text-[#6a4b00]"
                                   : isSelected
                                     ? "selected-period-cell relative z-10 bg-[#eef7fb] text-[#17475f] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.78),inset_0_-3px_0_rgba(11,77,118,0.14)] hover:bg-[#e5f2f8]"
                                     : "bg-white text-[#51615f] hover:bg-[#eef8f2]"
@@ -1652,7 +1670,7 @@ export function BookingDashboard({
                             key={`${dateKey}-${time}`}
                             onClick={() => {
                               setSelectedDate(dateKey);
-                              if (isOpen && !booking && !cleanupBooking) {
+                              if (isOpen && !isDeparture && !booking && !cleanupBooking) {
                                 updateRequest("date", dateKey);
                                 updateRequest("start", time);
                               }
@@ -1662,6 +1680,8 @@ export function BookingDashboard({
                                 ? `${booking.title} (${booking.start}-${booking.end})`
                                 : cleanupBooking
                                   ? `Čeká na úklid po akci ${cleanupBooking.title}`
+                                  : isDeparture
+                                    ? "Odchod ze sálu před zavíračkou"
                                 : undefined
                             }
                             data-current-slot={
@@ -1707,6 +1727,15 @@ export function BookingDashboard({
                                 </span>
                                 <span className="mt-1 block max-w-full truncate leading-4">
                                   Po akci {cleanupBooking.title}
+                                </span>
+                              </span>
+                            ) : isDeparture ? (
+                              <span className="relative z-10 block max-w-full overflow-hidden">
+                                <span className="block truncate font-semibold">
+                                  Odchod
+                                </span>
+                                <span className="mt-1 block max-w-full truncate leading-4">
+                                  ze sálu
                                 </span>
                               </span>
                             ) : (
@@ -1788,7 +1817,7 @@ export function BookingDashboard({
                         </button>
 
                         {timeSlots.map((time) => {
-                          const { booking, cleanupBooking, isOpen } =
+                          const { booking, cleanupBooking, isDeparture, isOpen } =
                             getSlotState(dateKey, time);
                           const slotFill = getSlotFill(
                             time,
@@ -1826,6 +1855,10 @@ export function BookingDashboard({
                                               ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
                                               : ""
                                           }`
+                                        : isDeparture
+                                          ? isSelected
+                                            ? "relative z-10 bg-[#fff6d8] text-[#6a4b00] ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.14),inset_0_3px_0_rgba(255,255,255,0.62)]"
+                                            : "bg-[#fff6d8] text-[#6a4b00]"
                                     : isSelected
                                       ? "selected-period-cell relative z-10 bg-[#eef7fb] text-[#17475f] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.78),inset_0_-3px_0_rgba(11,77,118,0.14)] hover:bg-[#e5f2f8]"
                                       : "bg-white text-[#51615f] hover:bg-[#eef8f2]"
@@ -1833,7 +1866,7 @@ export function BookingDashboard({
                               key={`${dateKey}-${time}`}
                               onClick={() => {
                                 setSelectedDate(dateKey);
-                                if (isOpen && !booking && !cleanupBooking) {
+                                if (isOpen && !isDeparture && !booking && !cleanupBooking) {
                                   updateRequest("date", dateKey);
                                   updateRequest("start", time);
                                 }
@@ -1843,6 +1876,8 @@ export function BookingDashboard({
                                   ? `${booking.title} (${booking.start}-${booking.end})`
                                   : cleanupBooking
                                     ? `Čeká na úklid po akci ${cleanupBooking.title}`
+                                    : isDeparture
+                                      ? "Odchod ze sálu před zavíračkou"
                                   : undefined
                               }
                               data-current-slot={
@@ -1890,6 +1925,15 @@ export function BookingDashboard({
                                   </span>
                                   <span className="mt-0.5 block truncate">
                                     Po akci
+                                  </span>
+                                </span>
+                              ) : isDeparture ? (
+                                <span className="relative z-10 block max-w-full overflow-hidden">
+                                  <span className="block truncate font-semibold">
+                                    Odchod
+                                  </span>
+                                  <span className="mt-0.5 block truncate">
+                                    ze sálu
                                   </span>
                                 </span>
                               ) : (

@@ -256,6 +256,25 @@ export function isSlotOpen(date: Date, time: string) {
   return slot >= timeToMinutes(hours.start) && slot < timeToMinutes(hours.end);
 }
 
+export function isDepartureSlot(
+  date: Date,
+  time: string,
+  slotMinutes = hallSettings.slotMinutes,
+) {
+  const hours = getOpeningHoursForDate(date);
+
+  if (!hours) {
+    return false;
+  }
+
+  const slotStart = timeToMinutes(time);
+  const slotEnd = slotStart + slotMinutes;
+  const departureStart = timeToMinutes(hours.end) - 30;
+  const closingTime = timeToMinutes(hours.end);
+
+  return slotStart < closingTime && slotEnd > departureStart;
+}
+
 export function formatOpeningHoursSummary() {
   return "Po-Ct 10:30-22, Pa 10:30-23, So 12-22, Ne 14-21";
 }

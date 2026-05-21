@@ -9,23 +9,4 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1969ms
- ○ Compiling /api/availability ...
- ✓ Compiled /api/availability in 2s (302 modules)
- GET /api/availability 200 in 2227ms
- GET /api/availability 200 in 2240ms
- GET /api/availability 200 in 28ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 25ms
- GET /api/availability 200 in 23ms
- GET /api/availability 200 in 28ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 41ms
- GET /api/availability 200 in 43ms
- GET /api/availability 200 in 51ms
- ○ Compiling /admin ...
- ✓ Compiled /admin in 3.1s (738 modules)
+ ✓ Ready in 1819ms

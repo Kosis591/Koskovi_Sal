@@ -12,9 +12,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const cookieStore = await cookies();
-  const actor = getAdminRequestUsername(cookieStore);
 
-  if (!isAdminRequest(cookieStore) || isReadOnlyLessonUsername(actor)) {
+  if (!isAdminRequest(cookieStore)) {
     return NextResponse.json({ message: "Nepřihlášeno." }, { status: 401 });
   }
 
