@@ -1,4 +1,6 @@
-import { createHmac, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 export const adminSessionCookie = "koskovi_admin_session";
@@ -14,8 +16,19 @@ type AdminCredential = {
   username: string;
 };
 
+export type StoredAdminUser = {
+  createdAt?: string;
+  createdBy?: string;
+  passwordHash: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  username: string;
+};
+
+const adminUsersFile = path.join(process.cwd(), "data", "admin-users.json");
+
 function getAdminCredentials(): AdminCredential[] {
-  return [
+  const credentials = [
     {
       username: process.env.ADMIN_USERNAME ?? "kosis",
       password: process.env.ADMIN_PASSWORD_HASH
@@ -41,6 +54,21 @@ function getAdminCredentials(): AdminCredential[] {
         process.env.ADMIN_TKKOSKOVI_PASSWORD_HASH ?? tkkoskoviPasswordHash,
     },
   ];
+
+  const mergedCredentials = new Map<string, AdminCredential>();
+
+  for (const credential of credentials) {
+    mergedCredentials.set(normalizeUsername(credential.username), credential);
+  }
+
+  for (const user of readStoredAdminUsersSync()) {
+    mergedCredentials.set(normalizeUsername(user.username), {
+      username: user.username,
+      passwordHash: user.passwordHash,
+    });
+  }
+
+  return [...mergedCredentials.values()];
 }
 
 function getSessionSecret() {
@@ -101,6 +129,21 @@ export function isReadOnlyLessonUsername(username: string | null | undefined) {
   return normalizeUsername(username ?? "") === "tkkoskovi";
 }
 
+export function listAdminUsernames() {
+  return getAdminCredentials().map((credential) => credential.username);
+}
+
+export function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const key = scryptSync(password, salt, 64).toString("hex");
+
+  return `scrypt$${salt}$${key}`;
+}
+
+export function verifyAdminPassword(username: string, password: string) {
+  return isAdminCredentials(username, password);
+}
+
 function signSession(sessionId: string, username: string) {
   return createHmac("sha256", getSessionSecret())
     .update(`${sessionId}.${username}`)
@@ -147,6 +190,23 @@ function verifyPasswordHash(password: string, passwordHash: string) {
   return timingSafeEqual(actualKey, expectedKey);
 }
 
-function normalizeUsername(username: string) {
+export function normalizeUsername(username: string) {
   return username.trim().toLocaleLowerCase("cs-CZ");
+}
+
+function readStoredAdminUsersSync() {
+  try {
+    const content = readFileSync(adminUsersFile, "utf8");
+    const parsed = JSON.parse(content) as StoredAdminUser[];
+
+    return Array.isArray(parsed)
+      ? parsed.filter((user) => user.username && user.passwordHash)
+      : [];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return [];
+    }
+
+    throw error;
+  }
 }

@@ -57,6 +57,7 @@ import {
 } from "@/lib/admin-auth-client";
 import {
   createTimeSlots,
+  getOpeningHoursForDate,
   getOpeningHoursGroups,
   formatOpeningHoursForDate,
   formatDateKey,
@@ -127,6 +128,11 @@ export function BookingDashboard({
   });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [accountPanelOpen, setAccountPanelOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [accountMessage, setAccountMessage] = useState("");
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(
     initialSession.authenticated,
   );
@@ -514,6 +520,23 @@ export function BookingDashboard({
     }
   }
 
+  function setWholeDayBooking() {
+    const date = new Date(`${request.date}T12:00:00`);
+    const openingHours = getOpeningHoursForDate(date);
+
+    if (!openingHours) {
+      setSubmitMessage("V tento den není nastavena otevírací doba.");
+      return;
+    }
+
+    setSubmitMessage("");
+    setRequest((current) => ({
+      ...current,
+      end: openingHours.end,
+      start: openingHours.start,
+    }));
+  }
+
   function changeDisplayedPeriod(offset: number) {
     setSelectedDate((currentDateKey) => {
       const currentDate = new Date(`${currentDateKey}T12:00:00`);
@@ -584,6 +607,32 @@ export function BookingDashboard({
     setIsAuthenticated(false);
     setSessionUsername(null);
     setSubmitMessage("");
+  }
+
+  async function handleChangeOwnPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSavingAccount(true);
+    setAccountMessage("");
+
+    try {
+      const response = await fetch("/api/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = (await response.json()) as { message?: string };
+
+      if (!response.ok) {
+        setAccountMessage(data.message ?? "Heslo se nepodařilo změnit.");
+        return;
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setAccountMessage(data.message ?? "Heslo je změněné.");
+    } finally {
+      setIsSavingAccount(false);
+    }
   }
 
   async function handleBookingSubmit(event: FormEvent<HTMLFormElement>) {
@@ -1004,15 +1053,72 @@ export function BookingDashboard({
               </div>
             </div>
           </div>
-          {canManageBookings ? (
+          {isAuthenticated ? (
             <div className="rounded-md border border-[#ded6c9] bg-white px-3 py-2 text-sm text-[#66706f]">
-                Jsi přihlášen jako: {sessionUsername ?? "uživatel"}
-              <Link
-                className="ml-3 inline-flex h-9 items-center justify-center rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76]"
-                href="/admin"
-              >
-                Otevřít správu
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <span>Jsi přihlášen jako: {sessionUsername ?? "uživatel"}</span>
+                <button
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                  onClick={() => setAccountPanelOpen((current) => !current)}
+                  type="button"
+                >
+                  Profil
+                </button>
+                {canManageBookings ? (
+                  <Link
+                    className="inline-flex h-9 items-center justify-center rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76]"
+                    href="/admin"
+                  >
+                    Otevřít správu
+                  </Link>
+                ) : null}
+              </div>
+
+              {accountPanelOpen ? (
+                <div className="mt-4 grid gap-4 border-t border-[#ece3d5] pt-4">
+                  <form className="grid gap-3" onSubmit={handleChangeOwnPassword}>
+                    <h3 className="font-semibold text-[#132935]">Změna hesla</h3>
+                    {sessionUsername !== "kosis" ? (
+                      <input
+                        className="field-input"
+                        onChange={(event) => setCurrentPassword(event.target.value)}
+                        placeholder="Současné heslo"
+                        type="password"
+                        value={currentPassword}
+                      />
+                    ) : null}
+                    <input
+                      className="field-input"
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      placeholder="Nové heslo"
+                      required
+                      type="password"
+                      value={newPassword}
+                    />
+                    <button
+                      className="inline-flex h-10 items-center justify-center rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76] disabled:opacity-60"
+                      disabled={isSavingAccount}
+                      type="submit"
+                    >
+                      Změnit heslo
+                    </button>
+                  </form>
+
+                  {sessionUsername === "kosis" ? (
+                    <Link
+                      className="inline-flex h-10 w-fit items-center justify-center rounded-md border border-[#ded6c9] px-4 text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                      href="/admin/users"
+                    >
+                      Správa uživatelů
+                    </Link>
+                  ) : null}
+                  {accountMessage ? (
+                    <p className="rounded-md border border-[#cde6d9] bg-[#f4fbf7] px-3 py-2 text-sm text-[#245d3f]">
+                      {accountMessage}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -2233,6 +2339,15 @@ export function BookingDashboard({
                         value={request.end}
                       />
                     </label>
+                    {activeAppMode === "hall" ? (
+                      <button
+                        className="col-span-2 inline-flex h-10 items-center justify-center rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                        onClick={setWholeDayBooking}
+                        type="button"
+                      >
+                        Zabookovat celý den podle otevírací doby
+                      </button>
+                    ) : null}
                     {activeAppMode === "hall" ? (
                       <label className="field-label col-span-2">
                         Typ
