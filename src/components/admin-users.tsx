@@ -135,6 +135,12 @@ export function AdminUsers() {
           <ThemeToggle />
           <Link
             className="inline-flex h-11 items-center justify-center rounded-md border border-white/20 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
+            href="/"
+          >
+            Zpět na kalendář
+          </Link>
+          <Link
+            className="inline-flex h-11 items-center justify-center rounded-md border border-white/20 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
             href="/admin"
           >
             Zpět do správy
