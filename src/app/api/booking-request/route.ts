@@ -45,6 +45,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const isIndividualLesson = payload.bookingKind === "individual-lesson";
+
+  if (!isIndividualLesson && !isHallEventType(payload.eventType)) {
+    return NextResponse.json(
+      { message: "Vyber platný typ rezervace." },
+      { status: 400 },
+    );
+  }
+
+  const trainer =
+    isIndividualLesson || payload.eventType === "seminar"
+      ? payload.trainer
+      : undefined;
+
   const result = await createBooking({
     title: payload.name,
     organizer: payload.name,
@@ -53,11 +67,11 @@ export async function POST(request: NextRequest) {
     end: payload.end,
     cleanupRequired: Boolean(payload.cleanupRequired),
     bookingKind:
-      payload.bookingKind === "individual-lesson" ? "individual-lesson" : "hall",
+      isIndividualLesson ? "individual-lesson" : "hall",
     createdBy: actor,
-    status: payload.eventType === "blokace" ? "maintenance" : "confirmed",
-    trainer: payload.trainer,
-    note: [payload.trainer ? `Trenér: ${payload.trainer}` : null, payload.note]
+    status: payload.eventType === "obsazeno" ? "maintenance" : "confirmed",
+    trainer,
+    note: [trainer ? `Trenér: ${trainer}` : null, payload.note]
       .filter(Boolean)
       .join("\n"),
   });
@@ -100,4 +114,10 @@ export async function POST(request: NextRequest) {
       },
     },
   );
+}
+
+function isHallEventType(
+  eventType: string | undefined,
+): eventType is "soustredeni" | "seminar" | "obsazeno" {
+  return ["soustredeni", "seminar", "obsazeno"].includes(eventType ?? "");
 }

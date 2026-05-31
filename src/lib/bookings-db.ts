@@ -11,6 +11,7 @@ const bookingsFile = path.join(dataDir, "bookings.json");
 const recurringCancellationsFile = path.join(dataDir, "recurring-cancellations.json");
 const recurringOverridesFile = path.join(dataDir, "recurring-overrides.json");
 const recurringTrainersFile = path.join(dataDir, "recurring-trainers.json");
+const recurringHolidaysFile = path.join(dataDir, "recurring-holidays.json");
 const temporaryBookingsFile = path.join(dataDir, "bookings.json.tmp");
 const temporaryRecurringCancellationsFile = path.join(
   dataDir,
@@ -23,6 +24,10 @@ const temporaryRecurringOverridesFile = path.join(
 const temporaryRecurringTrainersFile = path.join(
   dataDir,
   "recurring-trainers.json.tmp",
+);
+const temporaryRecurringHolidaysFile = path.join(
+  dataDir,
+  "recurring-holidays.json.tmp",
 );
 const recurringHorizonDays = 28;
 const latBaseWeekMonday = "2026-05-18";
@@ -46,7 +51,23 @@ export type RecurringCancellationNotice = {
   start: string;
   title: string;
 };
+export type RecurringHoliday = {
+  end: string;
+  id: string;
+  label: string;
+  start: string;
+};
+export type RecurringOverrideNotice = {
+  date: string;
+  end: string;
+  id: string;
+  newTitle: string;
+  originalTitle: string;
+  start: string;
+};
 type RecurringBookingOverride = {
+  originalTitle?: string;
+  title?: string;
   trainer?: string;
 };
 type RecurringBookingOverrides = Record<string, RecurringBookingOverride>;
@@ -84,6 +105,109 @@ export async function getRecurringCancellationNotices() {
     );
 
   return notices;
+}
+
+export async function getRecurringHolidays() {
+  return readRecurringHolidays();
+}
+
+export async function getRecurringOverrideNotices() {
+  const overrides = await readRecurringOverrides();
+
+  return Object.entries(overrides)
+    .filter(([, override]) => Boolean(override.title && override.originalTitle))
+    .map(([id, override]) => {
+      const recurringNotice = createRecurringCancellationNotice(id);
+
+      return recurringNotice
+        ? {
+            date: recurringNotice.date,
+            end: recurringNotice.end,
+            id,
+            newTitle: override.title ?? "",
+            originalTitle: override.originalTitle ?? "",
+            start: recurringNotice.start,
+          }
+        : null;
+    })
+    .filter((notice): notice is RecurringOverrideNotice => Boolean(notice))
+    .filter((notice) => notice.date >= getTodayPragueDateKey())
+    .sort((left, right) =>
+      `${left.date}${left.start}`.localeCompare(`${right.date}${right.start}`),
+    );
+}
+
+export async function addRecurringHoliday(input: {
+  end: string;
+  label: string;
+  start: string;
+}) {
+  return withDatabaseLock(async () => {
+    const holidays = await readRecurringHolidays();
+    const holiday: RecurringHoliday = {
+      end: input.end,
+      id: crypto.randomUUID(),
+      label: input.label.trim() || "Prázdniny",
+      start: input.start,
+    };
+
+    await writeRecurringHolidays([...holidays, holiday]);
+    await writeBookings(await readBookings());
+
+    return holiday;
+  });
+}
+
+export async function deleteRecurringHoliday(id: string) {
+  return withDatabaseLock(async () => {
+    const holidays = await readRecurringHolidays();
+    await writeRecurringHolidays(holidays.filter((holiday) => holiday.id !== id));
+    await writeBookings(await readBookings());
+  });
+}
+
+export async function updateBookingTitle(id: string, title: string) {
+  return withDatabaseLock(async () => {
+    const bookings = await readBookings();
+    const bookingIndex = bookings.findIndex((candidate) => candidate.id === id);
+    const booking = bookings[bookingIndex];
+
+    if (!booking) {
+      return null;
+    }
+
+    const normalizedTitle = title.trim();
+
+    if (!id.startsWith("recurring-")) {
+      const updatedBooking = {
+        ...booking,
+        title: normalizedTitle,
+        updatedAt: new Date().toISOString(),
+      };
+
+      bookings[bookingIndex] = updatedBooking;
+      await writeBookings(bookings);
+
+      return updatedBooking;
+    }
+
+    const overrides = await readRecurringOverrides();
+    const originalTitle = overrides[id]?.originalTitle ?? booking.title;
+
+    await updateRecurringOverride(id, {
+      originalTitle:
+        normalizedTitle && normalizedTitle !== originalTitle
+          ? originalTitle
+          : undefined,
+      title:
+        normalizedTitle && normalizedTitle !== originalTitle
+          ? normalizedTitle
+          : undefined,
+    });
+    await writeBookings(bookings);
+
+    return (await readBookings()).find((candidate) => candidate.id === id) ?? null;
+  });
 }
 
 export async function updateRecurringTrainers(input: RecurringTrainerConfig) {
@@ -377,6 +501,7 @@ function createRecurringBookings() {
   const cancelledIds = getRecurringCancellationsSync();
   const recurringOverrides = getRecurringOverridesSync();
   const recurringTrainers = getRecurringTrainersSync();
+  const recurringHolidays = getRecurringHolidaysSync();
   const bookings: Booking[] = [];
 
   for (let offset = 0; offset <= recurringHorizonDays; offset += 1) {
@@ -384,6 +509,10 @@ function createRecurringBookings() {
     date.setUTCDate(today.getUTCDate() + offset);
     const day = date.getUTCDay();
     const dateKey = formatUtcDateKey(date);
+
+    if (isRecurringHolidayDate(dateKey, recurringHolidays)) {
+      continue;
+    }
 
     if (day === 1) {
       pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("deti", recurringTrainers, recurringOverrides, {
@@ -476,11 +605,13 @@ function buildRecurringBooking(
     recurringTrainers[key] ??
     ""
   ).trim();
+  const title = recurringOverrides[booking.id]?.title?.trim() || booking.title;
 
   return {
     ...booking,
     note: trainer ? `${booking.note}\nTrenér: ${trainer}` : booking.note,
     recurringKey: key,
+    title,
     trainer: trainer || undefined,
   };
 }
@@ -557,6 +688,14 @@ async function updateRecurringOverride(
     delete nextOverride.trainer;
   }
 
+  if (!nextOverride.title) {
+    delete nextOverride.title;
+  }
+
+  if (!nextOverride.originalTitle) {
+    delete nextOverride.originalTitle;
+  }
+
   if (Object.keys(nextOverride).length === 0) {
     delete overrides[id];
   } else {
@@ -605,13 +744,88 @@ function normalizeRecurringOverrides(overrides: RecurringBookingOverrides) {
     }
 
     const trainer = override.trainer?.trim();
+    const title = override.title?.trim();
+    const originalTitle = override.originalTitle?.trim();
+    const normalizedOverride: RecurringBookingOverride = {};
 
     if (trainer) {
-      normalized[id] = { trainer };
+      normalizedOverride.trainer = trainer;
+    }
+
+    if (title && originalTitle && title !== originalTitle) {
+      normalizedOverride.title = title;
+      normalizedOverride.originalTitle = originalTitle;
+    }
+
+    if (Object.keys(normalizedOverride).length > 0) {
+      normalized[id] = normalizedOverride;
     }
   }
 
   return normalized;
+}
+
+async function readRecurringHolidays() {
+  try {
+    return normalizeRecurringHolidays(
+      JSON.parse(await readFile(recurringHolidaysFile, "utf-8")) as RecurringHoliday[],
+    );
+  } catch {
+    return [];
+  }
+}
+
+function getRecurringHolidaysSync() {
+  try {
+    return normalizeRecurringHolidays(
+      JSON.parse(readFileSync(recurringHolidaysFile, "utf-8")) as RecurringHoliday[],
+    );
+  } catch {
+    return [];
+  }
+}
+
+async function writeRecurringHolidays(holidays: RecurringHoliday[]) {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(
+    temporaryRecurringHolidaysFile,
+    `${JSON.stringify(normalizeRecurringHolidays(holidays), null, 2)}\n`,
+    "utf-8",
+  );
+  await rename(temporaryRecurringHolidaysFile, recurringHolidaysFile);
+}
+
+function normalizeRecurringHolidays(holidays: RecurringHoliday[]) {
+  if (!Array.isArray(holidays)) {
+    return [];
+  }
+
+  return holidays
+    .filter(
+      (holiday) =>
+        holiday &&
+        typeof holiday.id === "string" &&
+        isDateKey(holiday.start) &&
+        isDateKey(holiday.end) &&
+        holiday.start <= holiday.end,
+    )
+    .map((holiday) => ({
+      end: holiday.end,
+      id: holiday.id,
+      label: holiday.label?.trim() || "Prázdniny",
+      start: holiday.start,
+    }))
+    .sort((left, right) => left.start.localeCompare(right.start));
+}
+
+function isRecurringHolidayDate(dateKey: string, holidays: RecurringHoliday[]) {
+  return holidays.some(
+    (holiday) => holiday.start <= dateKey && dateKey <= holiday.end,
+  );
+}
+
+function isDateKey(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 async function writeRecurringCancellations(ids: string[]) {

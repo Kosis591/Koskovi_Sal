@@ -1,27 +1,32 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import {
   cancellationDateFormatter,
   dayFormatter,
   formatEventCount,
 } from "@/components/booking-dashboard-utils";
-import type { RecurringCancellationNotice } from "@/lib/bookings-db";
+import type {
+  RecurringCancellationNotice,
+  RecurringOverrideNotice,
+} from "@/lib/bookings-db";
 import { formatDateKey } from "@/lib/schedule";
 
 export function RecurringCancellationPanel({
   cancellations,
+  changes,
   isAuthenticated,
   onReinstate,
   reinstatingId,
 }: {
   cancellations: RecurringCancellationNotice[];
+  changes: RecurringOverrideNotice[];
   isAuthenticated?: boolean;
   onReinstate?: (id: string) => void;
   reinstatingId?: string;
 }) {
-  if (cancellations.length === 0) {
+  if (cancellations.length === 0 && changes.length === 0) {
     return (
       <div className="flex h-full min-h-16 items-center rounded-md border border-white/10 bg-white/10 px-4 py-3 text-sm text-[#d7e6ed]">
         Žádný pravidelný trénink není aktuálně zrušený.
@@ -31,6 +36,25 @@ export function RecurringCancellationPanel({
 
   return (
     <div className="grid h-full gap-2">
+      {changes.map((change) => (
+        <div
+          className="rounded-md border border-[#f4d77a] bg-[#fff3c7] px-4 py-3 text-sm text-[#71510b] shadow-[0_12px_26px_rgba(0,0,0,0.12)]"
+          key={change.id}
+        >
+          <p className="flex items-center gap-2 font-semibold">
+            <RefreshCw size={17} />
+            Změna pravidelné aktivity
+          </p>
+          <p className="mt-1 text-[#806015]">
+            {change.originalTitle} se v datu{" "}
+            {cancellationDateFormatter.format(
+              new Date(`${change.date}T12:00:00`),
+            )}{" "}
+            od {change.start} do {change.end} mění na{" "}
+            <strong>{change.newTitle}</strong>.
+          </p>
+        </div>
+      ))}
       {cancellations.map((cancellation) => (
         <div
           className="rounded-md border border-[#ffb4a8] bg-[#7f1d1d] px-4 py-3 text-sm text-white shadow-[0_12px_26px_rgba(0,0,0,0.18)]"

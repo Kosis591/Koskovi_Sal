@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,8 +40,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-data/audit-log.jsonl
+# runtime data
+/data/
+
+# local assistant notes
+/AGENTS.md
+/CLAUDE.md
+
 dev-server.err.log
 *.log
 dev-server.out.log
 dev-server.err.log
+.env.example
+data/audit-log.jsonl
+data/audit-log.jsonl

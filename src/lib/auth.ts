@@ -7,8 +7,6 @@ export const adminSessionCookie = "koskovi_admin_session";
 
 const devPassword = "koskovi-admin";
 const devSecret = "local-development-session-secret";
-const tkkoskoviPasswordHash =
-  "scrypt$edfc92fc532a431fa231838459a9c76e$7be5af62f56492c90bed41766bc93bc6e6ac8a461f120f2d0e5e8f1da317dbcf787a1135c9f688e5422bcea44a1e86e13d13619e3e87c10c58c45b83433b981d";
 
 type AdminCredential = {
   password?: string;
@@ -33,7 +31,8 @@ function getAdminCredentials(): AdminCredential[] {
       username: process.env.ADMIN_USERNAME ?? "kosis",
       password: process.env.ADMIN_PASSWORD_HASH
         ? undefined
-        : process.env.ADMIN_PASSWORD ?? devPassword,
+        : process.env.ADMIN_PASSWORD ??
+          (process.env.NODE_ENV === "development" ? devPassword : undefined),
       passwordHash: process.env.ADMIN_PASSWORD_HASH,
     },
     {
@@ -50,8 +49,7 @@ function getAdminCredentials(): AdminCredential[] {
     },
     {
       username: "TKKoskovi",
-      passwordHash:
-        process.env.ADMIN_TKKOSKOVI_PASSWORD_HASH ?? tkkoskoviPasswordHash,
+      passwordHash: process.env.ADMIN_TKKOSKOVI_PASSWORD_HASH,
     },
   ];
 
@@ -72,7 +70,15 @@ function getAdminCredentials(): AdminCredential[] {
 }
 
 function getSessionSecret() {
-  return process.env.ADMIN_SESSION_SECRET ?? devSecret;
+  const secret =
+    process.env.ADMIN_SESSION_SECRET ??
+    (process.env.NODE_ENV === "development" ? devSecret : "");
+
+  if (!secret) {
+    throw new Error("V produkci chybi promenna ADMIN_SESSION_SECRET.");
+  }
+
+  return secret;
 }
 
 export function createAdminSession(username: string) {

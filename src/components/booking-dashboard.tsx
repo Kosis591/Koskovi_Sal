@@ -11,6 +11,7 @@ import {
   LogIn,
   LogOut,
   MapPin,
+  Save,
   Send,
   ShieldCheck,
   Sparkles,
@@ -49,7 +50,10 @@ import {
 } from "@/components/booking-dashboard-panels";
 import { SiteShell } from "@/components/site-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import type { RecurringCancellationNotice } from "@/lib/bookings-db";
+import type {
+  RecurringCancellationNotice,
+  RecurringOverrideNotice,
+} from "@/lib/bookings-db";
 import {
   getAdminSession,
   loginAdmin,
@@ -77,7 +81,7 @@ const initialRequest: BookingRequest = {
   date: "2026-05-20",
   start: "16:00",
   end: "18:00",
-  eventType: "tanecni-lekce",
+  eventType: "soustredeni",
   bookingKind: "hall",
   trainer: "",
   note: "",
@@ -97,6 +101,7 @@ type BookingDashboardProps = {
   initialBookings: Booking[];
   initialDate: string;
   initialRecurringCancellations: RecurringCancellationNotice[];
+  initialRecurringOverrides: RecurringOverrideNotice[];
   initialSession: {
     authenticated: boolean;
     username: string | null;
@@ -116,6 +121,7 @@ export function BookingDashboard({
   initialBookings,
   initialDate,
   initialRecurringCancellations,
+  initialRecurringOverrides,
   initialSession,
 }: BookingDashboardProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -148,7 +154,12 @@ export function BookingDashboard({
   const [deletingBookingId, setDeletingBookingId] = useState("");
   const [reinstatingBookingId, setReinstatingBookingId] = useState("");
   const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
+  const [savingTitleBookingId, setSavingTitleBookingId] = useState("");
+  const [bookingTitleDrafts, setBookingTitleDrafts] = useState<
+    Record<string, string>
+  >({});
   const [trainerMessage, setTrainerMessage] = useState("");
+  const [titleMessage, setTitleMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pastedLessonTable, setPastedLessonTable] = useState("");
   const [storedImportedLessons, setStoredImportedLessons] = useState<
@@ -160,6 +171,9 @@ export function BookingDashboard({
     useState<Booking[]>(initialBookings);
   const [recurringCancellations, setRecurringCancellations] = useState(
     initialRecurringCancellations,
+  );
+  const [recurringOverrides, setRecurringOverrides] = useState(
+    initialRecurringOverrides,
   );
   const [now, setNow] = useState<Date | null>(null);
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
@@ -385,10 +399,12 @@ export function BookingDashboard({
       source: string;
       bookings: Booking[];
       recurringCancellations?: RecurringCancellationNotice[];
+      recurringOverrides?: RecurringOverrideNotice[];
     };
 
     setCalendarBookings(data.bookings);
     setRecurringCancellations(data.recurringCancellations ?? []);
+    setRecurringOverrides(data.recurringOverrides ?? []);
   }, []);
 
   const loadImportedLessons = useCallback(async () => {
@@ -790,6 +806,46 @@ export function BookingDashboard({
     }
   }
 
+  async function handleUpdateBookingTitle(
+    bookingId: string,
+    currentTitle: string,
+  ) {
+    const title = (bookingTitleDrafts[bookingId] ?? currentTitle).trim();
+
+    if (!title || title === currentTitle) {
+      return;
+    }
+
+    setTitleMessage("");
+    setSavingTitleBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/title`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { message?: string };
+        setTitleMessage(data.message ?? "Název aktivity se nepodařilo uložit.");
+        return;
+      }
+
+      setTitleMessage("Změna aktivity je uložená.");
+      setBookingTitleDrafts((current) => {
+        const next = { ...current };
+        delete next[bookingId];
+        return next;
+      });
+      await syncCalendar();
+    } finally {
+      setSavingTitleBookingId("");
+    }
+  }
+
   async function handleSaveImportedLessons() {
     setImportMessage("");
     setIsSavingImport(true);
@@ -844,6 +900,8 @@ export function BookingDashboard({
               setRequest((current) => ({
                 ...current,
                 bookingKind: "hall",
+                eventType: "soustredeni",
+                trainer: "",
               }));
             }}
             type="button"
@@ -890,6 +948,7 @@ export function BookingDashboard({
         sideContent: (
           <RecurringCancellationPanel
             cancellations={recurringCancellations}
+            changes={recurringOverrides}
             isAuthenticated={isAuthenticated}
             onReinstate={handleReinstateRecurringBooking}
             reinstatingId={reinstatingBookingId}
@@ -2145,6 +2204,47 @@ export function BookingDashboard({
                         </select>
                       </label>
                     ) : null}
+                    {canManageBookings &&
+                    segment.kind === "booked" ? (
+                      <div className="mt-2 grid gap-2">
+                        <label className="block text-xs font-semibold">
+                          Název aktivity
+                          <input
+                            className="field-input mt-1 min-h-8 w-full py-1 text-xs"
+                            onChange={(event) =>
+                              setBookingTitleDrafts((current) => ({
+                                ...current,
+                                [segment.bookingId]: event.target.value,
+                              }))
+                            }
+                            value={
+                              bookingTitleDrafts[segment.bookingId] ??
+                              segment.title
+                            }
+                          />
+                        </label>
+                        <button
+                          className="inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-2.5 py-1.5 text-xs font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={
+                            savingTitleBookingId === segment.bookingId ||
+                            (bookingTitleDrafts[segment.bookingId] ??
+                              segment.title).trim() === segment.title
+                          }
+                          onClick={() =>
+                            handleUpdateBookingTitle(
+                              segment.bookingId,
+                              segment.title,
+                            )
+                          }
+                          type="button"
+                        >
+                          <Save size={13} />
+                          {savingTitleBookingId === segment.bookingId
+                            ? "Ukládám..."
+                            : "Uložit změnu aktivity"}
+                        </button>
+                      </div>
+                    ) : null}
                     {segment.kind === "cleanup" && segment.cleanupBookingId ? (
                       <button
                         className="mt-2 inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:opacity-70"
@@ -2200,6 +2300,12 @@ export function BookingDashboard({
             {trainerMessage ? (
               <p className="mt-3 rounded-md border border-[#cbe3d1] bg-[#f1faf2] px-3 py-2 text-xs font-semibold text-[#245d3f]">
                 {trainerMessage}
+              </p>
+            ) : null}
+
+            {titleMessage ? (
+              <p className="mt-3 rounded-md border border-[#dfc36b] bg-[#fff6d8] px-3 py-2 text-xs font-semibold text-[#5e4300]">
+                {titleMessage}
               </p>
             ) : null}
 
@@ -2353,15 +2459,21 @@ export function BookingDashboard({
                         Typ
                         <select
                           className="field-input mt-1"
-                          onChange={(event) =>
-                            updateRequest("eventType", event.target.value)
-                          }
+                          onChange={(event) => {
+                            const eventType = event.target.value;
+                            setSubmitMessage("");
+                            setRequest((current) => ({
+                              ...current,
+                              eventType,
+                              trainer:
+                                eventType === "seminar" ? current.trainer : "",
+                            }));
+                          }}
                           value={request.eventType}
                         >
-                          <option value="tanecni-lekce">Lekce</option>
-                          <option value="workshop">Seminář</option>
-                          <option value="spolecenska-akce">Akce na sále</option>
-                          <option value="blokace">Blokace</option>
+                          <option value="soustredeni">Soustředění</option>
+                          <option value="seminar">Seminář</option>
+                          <option value="obsazeno">Obsazeno</option>
                         </select>
                       </label>
                     ) : (
@@ -2369,7 +2481,7 @@ export function BookingDashboard({
                         Individuální lekce · sloty po 45 minutách
                       </div>
                     )}
-                    {request.eventType === "tanecni-lekce" ||
+                    {request.eventType === "seminar" ||
                     activeAppMode === "lessons" ? (
                       <label className="field-label col-span-2">
                         Trenér

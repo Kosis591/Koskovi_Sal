@@ -9,100 +9,13 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1735ms
- ○ Compiling /api/availability ...
- ✓ Compiled /api/availability in 1408ms (302 modules)
- GET /api/availability 200 in 1592ms
- GET /api/availability 200 in 47ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 19ms
- ✓ Compiled /api/auth/login in 186ms (306 modules)
- POST /api/auth/login 200 in 249ms
- ✓ Compiled /api/auth/session in 165ms (314 modules)
- GET /api/auth/session 200 in 234ms
- ✓ Compiled /api/individual-lessons in 123ms (317 modules)
- GET /api/individual-lessons 200 in 171ms
- ○ Compiling /admin/users ...
- ✓ Compiled /admin/users in 2.3s (752 modules)
- GET /admin/users 200 in 2477ms
- GET /api/auth/session 200 in 34ms
- GET /api/auth/session 200 in 19ms
- ✓ Compiled /api/admin-users in 192ms (732 modules)
- GET /api/admin-users 200 in 223ms
- GET /api/admin-users 200 in 245ms
- ✓ Compiled /api/auth/logout in 209ms (734 modules)
- POST /api/auth/logout 200 in 241ms
- POST /api/auth/login 401 in 24ms
- POST /api/auth/login 401 in 16ms
- POST /api/auth/login 401 in 13ms
- POST /api/auth/login 401 in 12ms
- POST /api/auth/login 401 in 32ms
- POST /api/auth/login 401 in 18ms
- POST /api/auth/login 401 in 13ms
- ✓ Compiled /admin in 377ms (748 modules)
- GET /admin 200 in 533ms
- GET /api/auth/session 200 in 37ms
- GET /api/auth/session 200 in 29ms
- POST /api/auth/login 401 in 18ms
- POST /api/auth/login 401 in 12ms
- POST /api/auth/login 401 in 15ms
- POST /api/auth/login 401 in 12ms
- POST /api/auth/login 401 in 26ms
+ ✓ Ready in 2.2s
  ○ Compiling / ...
- ✓ Compiled / in 512ms (781 modules)
- GET / 200 in 593ms
- ✓ Compiled /api/availability in 227ms (495 modules)
- GET /api/availability 200 in 267ms
- POST /api/auth/login 200 in 21ms
- GET /api/auth/session 200 in 25ms
- ✓ Compiled /api/individual-lessons in 269ms (484 modules)
- GET /api/individual-lessons 200 in 309ms
- GET /admin 200 in 44ms
- GET /api/auth/session 200 in 17ms
- GET /api/auth/session 200 in 23ms
- ✓ Compiled /api/recurring-trainers in 458ms (777 modules)
- GET /api/recurring-trainers 200 in 486ms
- GET /api/recurring-trainers 200 in 514ms
- GET /api/bookings 200 in 519ms
- GET /api/bookings 200 in 498ms
- ✓ Compiled /api/audit-log in 190ms (779 modules)
- GET /api/audit-log 200 in 234ms
- GET /api/audit-log 200 in 240ms
- ✓ Compiled /admin/users in 227ms (500 modules)
- GET /admin/users 200 in 321ms
- GET /api/auth/session 200 in 25ms
- GET /api/auth/session 200 in 19ms
- ✓ Compiled /api/admin-users in 181ms (503 modules)
- GET /api/admin-users 200 in 228ms
- GET /api/admin-users 200 in 254ms
- POST /api/admin-users 200 in 63ms
- GET /api/admin-users 200 in 126ms
- ✓ Compiled in 145ms (302 modules)
- GET /admin 200 in 75ms
- GET /api/auth/session 200 in 20ms
- GET /api/auth/session 200 in 20ms
- GET /api/recurring-trainers 200 in 34ms
- GET /api/bookings 200 in 43ms
- GET /api/recurring-trainers 200 in 28ms
- GET /api/bookings 200 in 32ms
- GET /api/audit-log 200 in 32ms
- GET /api/audit-log 200 in 18ms
- GET / 200 in 49ms
- GET /api/individual-lessons 200 in 27ms
- ✓ Compiled /api/auth/logout in 160ms (501 modules)
- POST /api/auth/logout 200 in 206ms
- ✓ Compiled /api/auth/login in 140ms (494 modules)
- POST /api/auth/login 200 in 217ms
- GET /api/auth/session 200 in 21ms
- GET /admin 200 in 63ms
- GET /api/auth/session 200 in 21ms
- GET /api/auth/session 200 in 19ms
- GET /api/recurring-trainers 200 in 32ms
- GET /api/bookings 200 in 40ms
- GET /api/bookings 200 in 28ms
- GET /api/recurring-trainers 200 in 30ms
- GET /api/audit-log 200 in 30ms
- GET /api/audit-log 200 in 18ms
- POST /api/auth/logout 200 in 16ms
+ ✓ Compiled / in 4.5s (757 modules)
+ GET / 200 in 5922ms
+ ○ Compiling /api/availability ...
+ ✓ Compiled /api/availability in 933ms (768 modules)
+ GET /api/availability 200 in 1091ms
+ GET /api/availability 200 in 74ms
+ GET /api/availability 200 in 39ms
+ GET /api/availability 200 in 57ms

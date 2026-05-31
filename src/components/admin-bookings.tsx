@@ -1,12 +1,13 @@
 "use client";
 
-import { Check, LogIn, LogOut, Trash2 } from "lucide-react";
+import { CalendarOff, Check, LogIn, LogOut, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { SiteShell } from "@/components/site-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getAdminSession, loginAdmin, logoutAdmin } from "@/lib/admin-auth-client";
 import { trainerOptions, type Booking } from "@/lib/schedule";
+import type { RecurringHoliday } from "@/lib/bookings-db";
 
 type AuditLogEntry = {
   action: string;
@@ -36,6 +37,12 @@ export function AdminBookings() {
   const [recurringTrainerLabels, setRecurringTrainerLabels] = useState<
     RecurringTrainingLabel[]
   >([]);
+  const [recurringHolidays, setRecurringHolidays] = useState<RecurringHoliday[]>(
+    [],
+  );
+  const [holidayLabel, setHolidayLabel] = useState("");
+  const [holidayStart, setHolidayStart] = useState("");
+  const [holidayEnd, setHolidayEnd] = useState("");
   const [username, setUsername] = useState("");
   const [sessionUsername, setSessionUsername] = useState<string | null>(null);
   const [password, setPassword] = useState("");
@@ -43,6 +50,10 @@ export function AdminBookings() {
   const [isLoading, setIsLoading] = useState(true);
   const [bookingsPage, setBookingsPage] = useState(1);
   const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
+  const [savingTitleBookingId, setSavingTitleBookingId] = useState("");
+  const [bookingTitleDrafts, setBookingTitleDrafts] = useState<
+    Record<string, string>
+  >({});
   const [undoingTimestamp, setUndoingTimestamp] = useState("");
   const [message, setMessage] = useState("");
   const [mobileView, setMobileView] = useState<AdminMobileView>("menu");
@@ -81,6 +92,20 @@ export function AdminBookings() {
 
     const data = (await response.json()) as { labels: RecurringTrainingLabel[] };
     setRecurringTrainerLabels(data.labels);
+  }, []);
+
+  const loadRecurringHolidays = useCallback(async () => {
+    const response = await fetch("/api/recurring-holidays", {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      setRecurringHolidays([]);
+      return;
+    }
+
+    const data = (await response.json()) as { holidays: RecurringHoliday[] };
+    setRecurringHolidays(data.holidays);
   }, []);
 
   const totalBookingPages = Math.max(1, Math.ceil(bookings.length / bookingsPerPage));
@@ -131,7 +156,11 @@ export function AdminBookings() {
       setSessionUsername(session.username ?? null);
 
       if (session.authenticated) {
-        await Promise.all([loadBookings(), loadRecurringLabels()]);
+        await Promise.all([
+          loadBookings(),
+          loadRecurringHolidays(),
+          loadRecurringLabels(),
+        ]);
 
         if (session.username) {
           await loadAuditLog();
@@ -142,7 +171,12 @@ export function AdminBookings() {
     }
 
     void loadSession();
-  }, [loadAuditLog, loadBookings, loadRecurringLabels]);
+  }, [
+    loadAuditLog,
+    loadBookings,
+    loadRecurringHolidays,
+    loadRecurringLabels,
+  ]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -162,7 +196,11 @@ export function AdminBookings() {
     setIsAuthenticated(true);
     const session = await getAdminSession();
     setSessionUsername(session.username ?? null);
-    await Promise.all([loadBookings(), loadRecurringLabels()]);
+    await Promise.all([
+      loadBookings(),
+      loadRecurringHolidays(),
+      loadRecurringLabels(),
+    ]);
 
     if (session.username) {
       await loadAuditLog();
@@ -175,6 +213,7 @@ export function AdminBookings() {
     setSessionUsername(null);
     setBookings([]);
     setAuditLog([]);
+    setRecurringHolidays([]);
     setRecurringTrainerLabels([]);
     setMessage("");
   }
@@ -201,6 +240,85 @@ export function AdminBookings() {
     } finally {
       setSavingTrainerBookingId("");
     }
+  }
+
+  async function handleBookingTitleChange(booking: Booking) {
+    const title = (bookingTitleDrafts[booking.id] ?? booking.title).trim();
+
+    if (!title || title === booking.title) {
+      return;
+    }
+
+    setSavingTitleBookingId(booking.id);
+    setMessage("");
+
+    try {
+      const response = await fetch(`/api/bookings/${booking.id}/title`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      const data = (await response.json()) as { message?: string };
+
+      if (!response.ok) {
+        setMessage(data.message ?? "Název aktivity se nepodařilo uložit.");
+        return;
+      }
+
+      setMessage("Změna aktivity je uložená.");
+      setBookingTitleDrafts((current) => {
+        const next = { ...current };
+        delete next[booking.id];
+        return next;
+      });
+      await loadBookings();
+    } finally {
+      setSavingTitleBookingId("");
+    }
+  }
+
+  async function handleAddHoliday(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+
+    const response = await fetch("/api/recurring-holidays", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        end: holidayEnd,
+        label: holidayLabel,
+        start: holidayStart,
+      }),
+    });
+    const data = (await response.json()) as { message?: string };
+
+    if (!response.ok) {
+      setMessage(data.message ?? "Prázdniny se nepodařilo uložit.");
+      return;
+    }
+
+    setHolidayLabel("");
+    setHolidayStart("");
+    setHolidayEnd("");
+    setMessage("Období bez generovaných tréninků je uložené.");
+    await Promise.all([loadBookings(), loadRecurringHolidays()]);
+  }
+
+  async function handleDeleteHoliday(id: string) {
+    const response = await fetch("/api/recurring-holidays", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = (await response.json()) as { message?: string };
+
+    if (!response.ok) {
+      setMessage(data.message ?? "Prázdniny se nepodařilo odstranit.");
+      return;
+    }
+
+    setMessage("Období prázdnin je odstraněné.");
+    await Promise.all([loadBookings(), loadRecurringHolidays()]);
   }
 
   async function handleDelete(id: string) {
@@ -384,6 +502,92 @@ export function AdminBookings() {
             ) : null}
           </section>
 
+          <section className="rounded-lg border border-[#ded6c9] bg-white p-5 lg:col-span-2">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fff3c7] text-[#806015]">
+                <CalendarOff size={20} />
+              </span>
+              <div>
+                <h2 className="text-xl font-semibold">Prázdniny a volno</h2>
+                <p className="mt-1 text-sm text-[#66706f]">
+                  V uloženém období se pravidelné tréninky automaticky
+                  nevytvoří. Ručně zadané rezervace zůstanou beze změny.
+                </p>
+              </div>
+            </div>
+
+            <form
+              className="mt-5 grid gap-3 md:grid-cols-[minmax(180px,1fr)_160px_160px_auto] md:items-end"
+              onSubmit={handleAddHoliday}
+            >
+              <label className="field-label">
+                Popis
+                <input
+                  className="field-input mt-1"
+                  onChange={(event) => setHolidayLabel(event.target.value)}
+                  placeholder="Např. letní soustředění"
+                  value={holidayLabel}
+                />
+              </label>
+              <label className="field-label">
+                Od
+                <input
+                  className="field-input mt-1"
+                  onChange={(event) => setHolidayStart(event.target.value)}
+                  required
+                  type="date"
+                  value={holidayStart}
+                />
+              </label>
+              <label className="field-label">
+                Do
+                <input
+                  className="field-input mt-1"
+                  onChange={(event) => setHolidayEnd(event.target.value)}
+                  required
+                  type="date"
+                  value={holidayEnd}
+                />
+              </label>
+              <button
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76]"
+                type="submit"
+              >
+                <Save size={16} />
+                Uložit období
+              </button>
+            </form>
+
+            {recurringHolidays.length > 0 ? (
+              <div className="mt-4 grid gap-2">
+                {recurringHolidays.map((holiday) => (
+                  <div
+                    className="flex flex-col gap-3 rounded-md border border-[#f4d77a] bg-[#fffaf0] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    key={holiday.id}
+                  >
+                    <div>
+                      <p className="font-semibold text-[#71510b]">
+                        {holiday.label}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[#806015]">
+                        {formatDateCz(holiday.start)} až{" "}
+                        {formatDateCz(holiday.end)}
+                      </p>
+                    </div>
+                    <button
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#edd3cc] px-3 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#fff0eb]"
+                      onClick={() => handleDeleteHoliday(holiday.id)}
+                      type="button"
+                    >
+                      <Trash2 size={14} />
+                      Odstranit
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+
           <section
             className={`scroll-mt-4 rounded-lg border border-[#ded6c9] bg-white p-5 ${
               mobileView === "trainers" ? "block" : "hidden lg:block"
@@ -460,6 +664,34 @@ export function AdminBookings() {
                             </option>
                           ))}
                         </select>
+                        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                          <input
+                            className="field-input min-h-10"
+                            onChange={(event) =>
+                              setBookingTitleDrafts((current) => ({
+                                ...current,
+                                [booking.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Přepsat aktivitu pro tento termín"
+                            value={bookingTitleDrafts[booking.id] ?? booking.title}
+                          />
+                          <button
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={
+                              savingTitleBookingId === booking.id ||
+                              (bookingTitleDrafts[booking.id] ?? booking.title).trim() ===
+                                booking.title
+                            }
+                            onClick={() =>
+                              handleBookingTitleChange(booking)
+                            }
+                            type="button"
+                          >
+                            <Save size={14} />
+                            Uložit název
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <p className="mt-3 text-sm text-[#66706f]">
@@ -554,6 +786,39 @@ export function AdminBookings() {
                       </select>
                     </label>
 
+                    {
+                      <div className="grid gap-2">
+                        <label className="field-label">
+                          Název aktivity
+                          <input
+                            className="field-input mt-1 min-h-10"
+                            onChange={(event) =>
+                              setBookingTitleDrafts((current) => ({
+                                ...current,
+                                [booking.id]: event.target.value,
+                              }))
+                            }
+                            value={bookingTitleDrafts[booking.id] ?? booking.title}
+                          />
+                        </label>
+                        <button
+                          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-3 text-sm font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={
+                            savingTitleBookingId === booking.id ||
+                            (bookingTitleDrafts[booking.id] ?? booking.title).trim() ===
+                              booking.title
+                          }
+                          onClick={() =>
+                            handleBookingTitleChange(booking)
+                          }
+                          type="button"
+                        >
+                          <Save size={14} />
+                          Uložit změnu aktivity
+                        </button>
+                      </div>
+                    }
+
                     <div className="flex items-center justify-between gap-3 text-xs text-[#66706f]">
                       <span>
                         Přidal:{" "}
@@ -625,6 +890,37 @@ export function AdminBookings() {
                             </option>
                           ))}
                         </select>
+                        {
+                          <div className="mt-2 grid gap-2">
+                            <input
+                              className="field-input min-h-8 py-1 text-xs"
+                              onChange={(event) =>
+                                setBookingTitleDrafts((current) => ({
+                                  ...current,
+                                  [booking.id]: event.target.value,
+                                }))
+                              }
+                              value={
+                                bookingTitleDrafts[booking.id] ?? booking.title
+                              }
+                            />
+                            <button
+                              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-2 text-xs font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
+                              disabled={
+                                savingTitleBookingId === booking.id ||
+                                (bookingTitleDrafts[booking.id] ??
+                                  booking.title).trim() === booking.title
+                              }
+                              onClick={() =>
+                                handleBookingTitleChange(booking)
+                              }
+                              type="button"
+                            >
+                              <Save size={13} />
+                              Uložit název
+                            </button>
+                          </div>
+                        }
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-semibold">
@@ -773,6 +1069,7 @@ function formatAuditAction(action: string) {
     "booking.clean": "potvrdil úklid",
     "booking.create": "vytvořil akci",
     "booking.delete": "smazal akci",
+    "booking.rename": "přejmenoval pravidelnou aktivitu",
     "booking.undo": "vrátil operaci",
     "booking.update": "upravil akci",
   };
