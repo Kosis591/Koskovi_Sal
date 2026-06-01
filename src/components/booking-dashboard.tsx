@@ -884,7 +884,7 @@ export function BookingDashboard({
       }`}
       description={
         <>
-          Přehled dostupnosti pro lekce, workshopy a společenské akce Koškovi.
+          Přehled dostupnosti sálu TK Koškovi pro volný trénink.
         </>
       }
       eyebrow={
@@ -1006,7 +1006,7 @@ export function BookingDashboard({
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
               {activeAppMode === "hall" ? (
                 <label className="mobile-view-select field-label">
-                  Zobrazení
+                  Volba časového rozmezí:
                   <select
                     className="field-input mt-1"
                     onChange={(event) => {

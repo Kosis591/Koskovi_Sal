@@ -518,7 +518,7 @@ function createRecurringBookings() {
       pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("deti", recurringTrainers, recurringOverrides, {
         id: `recurring-deti-${dateKey}`,
         title: "Děti",
-        organizer: "Koskovi",
+        organizer: "Koškovi",
         date: dateKey,
         start: "15:15",
         end: "17:00",
@@ -530,8 +530,8 @@ function createRecurringBookings() {
     if (day === 2) {
       pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("juniori-utery", recurringTrainers, recurringOverrides, {
         id: `recurring-juniori-utery-${dateKey}`,
-        title: "Juniori",
-        organizer: "Koskovi",
+        title: "Junioři",
+        organizer: "Koškovi",
         date: dateKey,
         start: "16:30",
         end: "17:15",
@@ -542,7 +542,7 @@ function createRecurringBookings() {
       pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("practise", recurringTrainers, recurringOverrides, {
         id: `recurring-practise-${dateKey}`,
         title: "Practise",
-        organizer: "Koskovi",
+        organizer: "Koškovi",
         date: dateKey,
         start: "17:30",
         end: "19:30",
@@ -557,7 +557,7 @@ function createRecurringBookings() {
       pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("pohybovka", recurringTrainers, recurringOverrides, {
         id: `recurring-pohybovka-${dateKey}`,
         title: "Pohybovka",
-        organizer: "Koskovi",
+        organizer: "Koškovi",
         date: dateKey,
         start: "17:15",
         end: "18:00",
@@ -568,7 +568,7 @@ function createRecurringBookings() {
       pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("spolecna", recurringTrainers, recurringOverrides, {
         id: `recurring-spolecna-${dateKey}`,
         title: `Společná ${danceStyle}`,
-        organizer: "Koskovi",
+        organizer: "Koškovi",
         date: dateKey,
         start: "18:00",
         end: "19:30",
@@ -580,8 +580,8 @@ function createRecurringBookings() {
     if (day === 5) {
       pushRecurringBooking(bookings, cancelledIds, buildRecurringBooking("juniori-patek", recurringTrainers, recurringOverrides, {
         id: `recurring-juniori-patek-${dateKey}`,
-        title: "Juniori",
-        organizer: "Koskovi",
+        title: "Junioři",
+        organizer: "Koškovi",
         date: dateKey,
         start: "16:00",
         end: "17:00",

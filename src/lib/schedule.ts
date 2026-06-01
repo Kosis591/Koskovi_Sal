@@ -35,17 +35,17 @@ export type BookingRequest = {
 };
 
 export const hallSettings = {
-  name: "Koskovi",
+  name: "Koškovi",
   location: "Hlavní sál",
   slotMinutes: 30,
   openingHours: [
-    { day: 1, label: "Pondeli", start: "10:30", end: "22:00" },
-    { day: 2, label: "Utery", start: "10:30", end: "22:00" },
-    { day: 3, label: "Streda", start: "10:30", end: "22:00" },
-    { day: 4, label: "Ctvrtek", start: "10:30", end: "22:00" },
-    { day: 5, label: "Patek", start: "10:30", end: "23:00" },
+    { day: 1, label: "Pondělí", start: "10:30", end: "22:00" },
+    { day: 2, label: "Úterý", start: "10:30", end: "22:00" },
+    { day: 3, label: "Středa", start: "10:30", end: "22:00" },
+    { day: 4, label: "Čtvrtek", start: "10:30", end: "22:00" },
+    { day: 5, label: "Pátek", start: "10:30", end: "23:00" },
     { day: 6, label: "Sobota", start: "12:00", end: "22:00" },
-    { day: 0, label: "Nedele", start: "14:00", end: "21:00" },
+    { day: 0, label: "Neděle", start: "14:00", end: "21:00" },
   ],
 };
 
@@ -63,7 +63,7 @@ export const bookings: Booking[] = [
   },
   {
     id: "evt-3",
-    title: "Spolecensky vecer",
+    title: "Společenský večer",
     organizer: "Mesto",
     date: "2026-05-21",
     start: "18:00",
@@ -281,10 +281,10 @@ export function formatOpeningHoursSummary() {
 
 export function getOpeningHoursGroups() {
   return [
-    { days: "Pondeli - ctvrtek", hours: "10:30-22:00" },
-    { days: "Patek", hours: "10:30-23:00" },
+    { days: "Pondělí - čtvrtek", hours: "10:30-22:00" },
+    { days: "Pátek", hours: "10:30-23:00" },
     { days: "Sobota", hours: "12:00-22:00" },
-    { days: "Nedele", hours: "14:00-21:00" },
+    { days: "Neděle", hours: "14:00-21:00" },
   ];
 }
 

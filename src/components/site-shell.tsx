@@ -59,7 +59,7 @@ export function SiteShell({
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <Image
-                  alt="Koskovi"
+                  alt="Koškovi"
                   className="h-auto w-44"
                   height={62}
                   priority
