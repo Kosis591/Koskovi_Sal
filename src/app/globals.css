@@ -82,6 +82,23 @@ textarea {
   will-change: opacity, transform, filter;
 }
 
+.booking-panel-transition {
+  animation: booking-panel-enter 240ms cubic-bezier(0.2, 0.82, 0.22, 1);
+  transform-origin: top center;
+}
+
+@keyframes booking-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes calendar-view-enter {
   0% {
     opacity: 0;
@@ -106,6 +123,10 @@ textarea {
 
 @media (prefers-reduced-motion: reduce) {
   .calendar-view-transition {
+    animation: calendar-view-enter-reduced 180ms ease-out;
+  }
+
+  .booking-panel-transition {
     animation: calendar-view-enter-reduced 180ms ease-out;
   }
 }

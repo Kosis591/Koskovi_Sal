@@ -3,9 +3,12 @@
 import {
   AlertCircle,
   CalendarDays,
+  CalendarPlus,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock3,
   LockKeyhole,
   LogIn,
@@ -17,6 +20,7 @@ import {
   Sparkles,
   Trash2,
   User,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -139,6 +143,7 @@ export function BookingDashboard({
   const [newPassword, setNewPassword] = useState("");
   const [accountMessage, setAccountMessage] = useState("");
   const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(
     initialSession.authenticated,
   );
@@ -152,6 +157,7 @@ export function BookingDashboard({
   const [cleaningBookingId, setCleaningBookingId] = useState("");
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deletingBookingId, setDeletingBookingId] = useState("");
+  const [expandedDayBookingId, setExpandedDayBookingId] = useState("");
   const [reinstatingBookingId, setReinstatingBookingId] = useState("");
   const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
   const [savingTitleBookingId, setSavingTitleBookingId] = useState("");
@@ -177,6 +183,9 @@ export function BookingDashboard({
   );
   const [now, setNow] = useState<Date | null>(null);
   const calendarScrollerRef = useRef<HTMLDivElement | null>(null);
+  const bookingFormPanelRef = useRef<HTMLDivElement | null>(null);
+  const bookingNameInputRef = useRef<HTMLInputElement | null>(null);
+  const loginUsernameInputRef = useRef<HTMLInputElement | null>(null);
 
   const normalizedSessionUsername = (sessionUsername ?? "").toLocaleLowerCase("cs-CZ");
   const isLessonReadOnlyAccount = normalizedSessionUsername === "tkkoskovi";
@@ -186,6 +195,12 @@ export function BookingDashboard({
   const activeAppMode: AppMode = canUseLessonMode ? appMode : "hall";
   const canManageBookings = isAuthenticated && !isLessonReadOnlyAccount;
   const canSaveImportedLessons = normalizedSessionUsername === "kosis";
+  const shouldShowBookingPanel =
+    (!isAuthenticated || canManageBookings) &&
+    (activeAppMode === "lessons" || isBookingFormOpen);
+  const isExpandedBookingLayout =
+    canManageBookings &&
+    (activeAppMode === "lessons" || isBookingFormOpen);
   const activeSlotMinutes =
     activeAppMode === "lessons" ? 45 : hallSettings.slotMinutes;
   const timeSlots = useMemo(
@@ -553,6 +568,37 @@ export function BookingDashboard({
     }));
   }
 
+  function scrollToBookingForm() {
+    setSubmitMessage("");
+    setIsBookingFormOpen(true);
+    setRequest((current) => ({
+      ...current,
+      bookingKind: "hall",
+      date: selectedDate,
+    }));
+    window.setTimeout(() => {
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        bookingFormPanelRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }, 0);
+
+    window.setTimeout(() => {
+      if (canManageBookings) {
+        bookingNameInputRef.current?.focus({ preventScroll: true });
+        return;
+      }
+
+      loginUsernameInputRef.current?.focus({ preventScroll: true });
+    }, 450);
+  }
+
+  function closeBookingForm() {
+    setIsBookingFormOpen(false);
+  }
+
   function changeDisplayedPeriod(offset: number) {
     setSelectedDate((currentDateKey) => {
       const currentDate = new Date(`${currentDateKey}T12:00:00`);
@@ -750,6 +796,7 @@ export function BookingDashboard({
           ? "Tento termín pravidelné akce byl zrušen."
           : "Akce byla smazána.",
       );
+      setExpandedDayBookingId("");
       await syncCalendar();
     } finally {
       setDeletingBookingId("");
@@ -877,8 +924,8 @@ export function BookingDashboard({
   return (
     <SiteShell
       maxWidthClassName="max-w-[1840px]"
-      contentClassName={`grid gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:pl-6 lg:pr-4 xl:pl-8 xl:pr-5 ${
-        isAuthenticated
+      contentClassName={`grid gap-5 px-4 py-5 transition-[grid-template-columns] duration-300 lg:grid-cols-[minmax(0,1fr)_320px] lg:pl-6 lg:pr-4 xl:pl-8 xl:pr-5 ${
+        isExpandedBookingLayout
           ? "xl:grid-cols-[minmax(0,1fr)_minmax(560px,620px)] 2xl:grid-cols-[minmax(900px,1fr)_minmax(640px,760px)] 2xl:pl-12"
           : "xl:grid-cols-[minmax(0,1fr)_340px]"
       }`}
@@ -897,6 +944,7 @@ export function BookingDashboard({
             }`}
             onClick={() => {
               setAppMode("hall");
+              setIsBookingFormOpen(false);
               setRequest((current) => ({
                 ...current,
                 bookingKind: "hall",
@@ -1123,6 +1171,17 @@ export function BookingDashboard({
                 >
                   Profil
                 </button>
+                {canManageBookings && activeAppMode === "hall" ? (
+                  <button
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#003758] bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76] disabled:border-[#c9dce7] disabled:bg-[#eef6fa] disabled:text-[#7a9aad] disabled:cursor-not-allowed"
+                    disabled={isBookingFormOpen}
+                    onClick={scrollToBookingForm}
+                    type="button"
+                  >
+                    <CalendarPlus size={15} />
+                    {isBookingFormOpen ? "Formulář otevřený" : "Přidat akci"}
+                  </button>
+                ) : null}
                 {canManageBookings ? (
                   <Link
                     className="inline-flex h-9 items-center justify-center rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76]"
@@ -1131,6 +1190,14 @@ export function BookingDashboard({
                     Otevřít správu
                   </Link>
                 ) : null}
+                <button
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#fff0eb]"
+                  onClick={handleLogout}
+                  type="button"
+                >
+                  <LogOut size={14} />
+                  Odhlásit
+                </button>
               </div>
 
               {accountPanelOpen ? (
@@ -2121,10 +2188,10 @@ export function BookingDashboard({
         </div>
 
         <aside className={`flex flex-col gap-5 lg:max-h-[min(760px,calc(100svh-112px))] lg:overflow-y-auto lg:pr-1 ${
-          isAuthenticated ? "xl:grid xl:max-h-none xl:grid-cols-[minmax(360px,1fr)_minmax(220px,260px)] xl:items-start xl:overflow-visible xl:pr-0 2xl:grid-cols-[minmax(420px,1fr)_minmax(260px,320px)]" : ""
+          isExpandedBookingLayout ? "xl:grid xl:max-h-none xl:grid-cols-[minmax(360px,1fr)_minmax(220px,260px)] xl:items-start xl:overflow-visible xl:pr-0 2xl:grid-cols-[minmax(420px,1fr)_minmax(260px,320px)]" : ""
         }`}>
           <div className={`rounded-lg border border-[#ded6c9] bg-white p-5 ${
-            isAuthenticated ? "lg:order-2" : "lg:order-1"
+            isExpandedBookingLayout ? "lg:order-2" : "lg:order-1"
           }`}>
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -2172,7 +2239,7 @@ export function BookingDashboard({
                     <Clock3 size={14} />
                     {segment.start}-{segment.end}
                   </span>
-                  <span className="min-w-0">
+                  <div className="min-w-0">
                     <span className="block truncate font-semibold">
                       {segment.title}
                     </span>
@@ -2181,67 +2248,33 @@ export function BookingDashboard({
                         {segment.description}
                       </span>
                     ) : null}
-                    {isAuthenticated && segment.kind === "booked" ? (
-                      <label className="mt-2 block text-xs font-semibold">
-                        Trenér
-                        <select
-                          className="field-input mt-1 min-h-8 w-full py-1 text-xs"
-                          disabled={savingTrainerBookingId === segment.bookingId}
-                          onChange={(event) =>
-                            handleUpdateBookingTrainer(
-                              segment.bookingId,
-                              event.target.value,
-                            )
-                          }
-                          value={segment.trainer ?? ""}
-                        >
-                          <option value="">Bez trenéra</option>
-                          {availableTrainers.map((trainer) => (
-                            <option key={trainer} value={trainer}>
-                              {trainer}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
                     {canManageBookings &&
                     segment.kind === "booked" ? (
-                      <div className="mt-2 grid gap-2">
-                        <label className="block text-xs font-semibold">
-                          Název aktivity
-                          <input
-                            className="field-input mt-1 min-h-8 w-full py-1 text-xs"
-                            onChange={(event) =>
-                              setBookingTitleDrafts((current) => ({
-                                ...current,
-                                [segment.bookingId]: event.target.value,
-                              }))
-                            }
-                            value={
-                              bookingTitleDrafts[segment.bookingId] ??
-                              segment.title
-                            }
-                          />
-                        </label>
+                      <div className="mt-1.5">
+                        {segment.trainer ? (
+                          <p className="truncate text-xs opacity-80">
+                            Trenér: {segment.trainer}
+                          </p>
+                        ) : null}
                         <button
-                          className="inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-2.5 py-1.5 text-xs font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
-                          disabled={
-                            savingTitleBookingId === segment.bookingId ||
-                            (bookingTitleDrafts[segment.bookingId] ??
-                              segment.title).trim() === segment.title
-                          }
+                          className="mt-1.5 inline-flex min-h-7 items-center justify-center gap-1 rounded-md border border-current/25 px-2 py-1 text-xs font-semibold transition hover:bg-white/50"
                           onClick={() =>
-                            handleUpdateBookingTitle(
-                              segment.bookingId,
-                              segment.title,
+                            setExpandedDayBookingId((current) =>
+                              current === segment.bookingId
+                                ? ""
+                                : segment.bookingId,
                             )
                           }
                           type="button"
                         >
-                          <Save size={13} />
-                          {savingTitleBookingId === segment.bookingId
-                            ? "Ukládám..."
-                            : "Uložit změnu aktivity"}
+                          {expandedDayBookingId === segment.bookingId ? (
+                            <ChevronUp size={13} />
+                          ) : (
+                            <ChevronDown size={13} />
+                          )}
+                          {expandedDayBookingId === segment.bookingId
+                            ? "Skrýt úpravy"
+                            : "Upravit"}
                         </button>
                       </div>
                     ) : null}
@@ -2262,28 +2295,103 @@ export function BookingDashboard({
                           : "Uklidil jsem sál"}
                       </button>
                     ) : null}
-                    {canManageBookings &&
-                    segment.kind === "booked" ? (
+                  </div>
+                  {canManageBookings &&
+                  segment.kind === "booked" &&
+                  expandedDayBookingId === segment.bookingId ? (
+                    <div className="col-span-2 grid min-w-0 gap-2 border-t border-current/20 pt-2">
+                      <label className="block min-w-0 text-xs font-semibold">
+                        Trenér
+                        <select
+                          className="field-input mt-1 min-h-8 w-full min-w-0 py-1 text-xs"
+                          disabled={
+                            savingTrainerBookingId === segment.bookingId
+                          }
+                          onChange={(event) =>
+                            handleUpdateBookingTrainer(
+                              segment.bookingId,
+                              event.target.value,
+                            )
+                          }
+                          value={segment.trainer ?? ""}
+                        >
+                          <option value="">Bez trenéra</option>
+                          {availableTrainers.map((trainer) => (
+                            <option key={trainer} value={trainer}>
+                              {trainer}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block min-w-0 text-xs font-semibold">
+                        Název aktivity
+                        <input
+                          className="field-input mt-1 min-h-8 w-full min-w-0 py-1 text-xs"
+                          onChange={(event) =>
+                            setBookingTitleDrafts((current) => ({
+                              ...current,
+                              [segment.bookingId]: event.target.value,
+                            }))
+                          }
+                          value={
+                            bookingTitleDrafts[segment.bookingId] ??
+                            segment.title
+                          }
+                        />
+                      </label>
                       <button
-                        className="mt-2 inline-flex min-h-8 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-[#d9a093] bg-[#fff0eb] px-2.5 py-1.5 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#ffe3da] disabled:cursor-not-allowed disabled:opacity-70"
+                        className="inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-2.5 py-1.5 text-xs font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={
+                          savingTitleBookingId === segment.bookingId ||
+                          (bookingTitleDrafts[segment.bookingId] ??
+                            segment.title).trim() === segment.title
+                        }
+                        onClick={() =>
+                          handleUpdateBookingTitle(
+                            segment.bookingId,
+                            segment.title,
+                          )
+                        }
+                        type="button"
+                      >
+                        <Save size={13} />
+                        {savingTitleBookingId === segment.bookingId
+                          ? "Ukládám..."
+                          : "Uložit změnu aktivity"}
+                      </button>
+                      <button
+                        className="inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border border-[#d9a093] bg-[#fff0eb] px-2.5 py-1.5 text-center text-xs font-semibold text-[#8c2f20] transition hover:bg-[#ffe3da] disabled:cursor-not-allowed disabled:opacity-70"
                         disabled={deletingBookingId === segment.bookingId}
                         onClick={() =>
                           handleDeleteBooking(segment.bookingId, segment.title)
                         }
                         type="button"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 className="shrink-0" size={13} />
                         {deletingBookingId === segment.bookingId
                           ? "Mazu..."
                           : isRecurringBookingId(segment.bookingId)
                             ? "Zrušit tento termín"
                             : "Smazat akci"}
                       </button>
-                    ) : null}
-                  </span>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
+
+            {activeAppMode === "hall" &&
+            !isAuthenticated &&
+            !isBookingFormOpen ? (
+              <button
+                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#003758] px-4 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(0,55,88,0.16)] transition hover:bg-[#0b4d76]"
+                onClick={scrollToBookingForm}
+                type="button"
+              >
+                <CalendarPlus size={17} />
+                Přihlásit se a přidat akci
+              </button>
+            ) : null}
 
             {cleanupMessage ? (
               <p className="mt-3 rounded-md border border-[#dfc36b] bg-[#fff6d8] px-3 py-2 text-xs font-semibold text-[#5e4300]">
@@ -2346,9 +2454,9 @@ export function BookingDashboard({
             ) : null}
           </div>
 
-          {!isAuthenticated || canManageBookings ? (
-          <div className={`rounded-lg border border-[#ded6c9] bg-white p-5 ${
-            isAuthenticated ? "lg:order-1" : "lg:order-2"
+          {shouldShowBookingPanel ? (
+          <div ref={bookingFormPanelRef} className={`booking-panel-transition scroll-mt-4 rounded-lg border border-[#ded6c9] bg-white p-5 ${
+            isExpandedBookingLayout ? "lg:order-1" : "lg:order-2"
           }`}>
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -2361,7 +2469,20 @@ export function BookingDashboard({
                   Vkládání rezervací je dostupné jen po přihlášení oprávněného uživatele.
                 </p>
               </div>
-              <LockKeyhole className="text-[#003758]" size={24} />
+              <div className="flex shrink-0 items-center gap-2">
+                <LockKeyhole className="text-[#003758]" size={21} />
+                {activeAppMode === "hall" ? (
+                  <button
+                    aria-label="Zavřít rezervační formulář"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#ded6c9] text-[#003758] transition hover:bg-[#f6f1e8]"
+                    onClick={closeBookingForm}
+                    title="Zavřít rezervační formulář"
+                    type="button"
+                  >
+                    <X size={17} />
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {isCheckingSession ? (
@@ -2405,6 +2526,7 @@ export function BookingDashboard({
                           : "Kurz, workshop nebo jmeno poradatele"
                       }
                       required
+                      ref={bookingNameInputRef}
                       value={request.name}
                     />
                   </Field>
@@ -2447,7 +2569,7 @@ export function BookingDashboard({
                     </label>
                     {activeAppMode === "hall" ? (
                       <button
-                        className="col-span-2 inline-flex h-10 items-center justify-center rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                        className="col-span-2 inline-flex min-h-10 items-center justify-center rounded-md border border-[#ded6c9] bg-[#fcfaf6] px-3 py-2 text-center text-sm font-semibold leading-5 text-[#003758] transition hover:bg-[#f6f1e8]"
                         onClick={setWholeDayBooking}
                         type="button"
                       >
@@ -2564,6 +2686,7 @@ export function BookingDashboard({
                     className="field-input mt-1"
                     onChange={(event) => setUsername(event.target.value)}
                     placeholder="Jméno uživatele"
+                    ref={loginUsernameInputRef}
                     required
                     value={username}
                   />

@@ -54,3 +54,5 @@ dev-server.err.log
 .env.example
 data/audit-log.jsonl
 data/audit-log.jsonl
+dev-server.err.log
+*.log

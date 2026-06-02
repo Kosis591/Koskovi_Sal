@@ -9,147 +9,36 @@ Vymazana Next.js cache: .next
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1709ms
- ○ Compiling / ...
- ✓ Compiled / in 3.2s (757 modules)
- GET / 200 in 4588ms
+ ✓ Ready in 4.7s
  ○ Compiling /api/availability ...
- ✓ Compiled /api/availability in 766ms (768 modules)
- GET /api/availability 200 in 905ms
- GET /api/availability 200 in 29ms
- GET /api/availability 200 in 59ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 43ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 26ms
- GET /api/availability 200 in 22ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 22ms
- GET /api/availability 200 in 17ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 28ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 38ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 55ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 32ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 17ms
- GET /api/availability 200 in 46ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 15ms
- GET /api/availability 200 in 52ms
- GET /api/availability 200 in 38ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 36ms
- GET /api/availability 200 in 42ms
- GET /api/availability 200 in 17ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 52ms
- GET /api/availability 200 in 17ms
- GET /api/availability 200 in 24ms
- GET /api/availability 200 in 24ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 61ms
- GET /api/availability 200 in 51ms
- GET /api/availability 200 in 57ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 30ms
- GET /api/availability 200 in 23ms
- GET /api/availability 200 in 52ms
- GET /api/availability 200 in 16ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 42ms
- GET /api/availability 200 in 27ms
- GET /api/availability 200 in 22ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 55ms
- GET /api/availability 200 in 33ms
- GET /api/availability 200 in 33ms
- GET /api/availability 200 in 25ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 29ms
- GET /api/availability 200 in 31ms
- GET /api/availability 200 in 28ms
- GET /api/availability 200 in 24ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 23ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 24ms
- GET /api/availability 200 in 30ms
- GET /api/availability 200 in 23ms
- GET /api/availability 200 in 40ms
- GET /api/availability 200 in 40ms
- GET /api/availability 200 in 40ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 47ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 27ms
- GET /api/availability 200 in 27ms
- GET /api/availability 200 in 25ms
- GET /api/availability 200 in 23ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 27ms
- GET /api/availability 200 in 37ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 24ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 39ms
- GET /api/availability 200 in 20ms
- GET /api/availability 200 in 18ms
- GET /api/availability 200 in 32ms
- GET /api/availability 200 in 32ms
- GET /api/availability 200 in 32ms
- GET /api/availability 200 in 42ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 36ms
- GET /api/availability 200 in 47ms
- GET /api/availability 200 in 28ms
- GET /api/availability 200 in 55ms
- GET /api/availability 200 in 27ms
- GET /api/availability 200 in 33ms
- GET /api/availability 200 in 30ms
- GET /api/availability 200 in 34ms
- GET /api/availability 200 in 21ms
- GET /api/availability 200 in 43ms
- GET /api/availability 200 in 15ms
- GET /api/availability 200 in 22ms
- GET /api/availability 200 in 28ms
- GET /api/availability 200 in 27ms
- GET /api/availability 200 in 25ms
- GET /api/availability 200 in 43ms
- GET /api/availability 200 in 22ms
- GET /api/availability 200 in 33ms
- GET /api/availability 200 in 22ms
- GET /api/availability 200 in 23ms
- GET /api/availability 200 in 41ms
- GET /api/availability 200 in 24ms
- GET /api/availability 200 in 32ms
- GET /api/availability 200 in 19ms
- GET /api/availability 200 in 34ms
- GET /api/availability 200 in 41ms
- GET /api/availability 200 in 32ms
- GET /api/availability 200 in 33ms
- GET /api/availability 200 in 34ms
- GET /api/availability 200 in 47ms
- GET /api/availability 200 in 59ms
- GET /api/availability 200 in 16ms
+ ✓ Compiled / in 11.7s (785 modules)
+ GET /api/availability 200 in 14694ms
+ GET / 200 in 11046ms
+ GET /api/availability 200 in 456ms
+ ○ Compiling /api/auth/login ...
+ ✓ Compiled /api/auth/login in 2.2s (764 modules)
+ POST /api/auth/login 200 in 2361ms
+ POST /api/auth/login 200 in 344ms
+ GET /api/availability 200 in 1235ms
+ ○ Compiling /api/auth/session ...
+ ✓ Compiled /api/auth/session in 918ms (766 modules)
+ GET /api/auth/session 200 in 1133ms
+ GET /api/auth/session 200 in 142ms
+ ○ Compiling /api/individual-lessons ...
+ ✓ Compiled /api/individual-lessons in 1112ms (769 modules)
+ GET /api/individual-lessons 200 in 1359ms
+ GET /api/availability 200 in 180ms
+ GET /api/availability 200 in 84ms
+ ✓ Compiled in 1810ms (420 modules)
+ GET /api/availability 200 in 470ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1739ms (476 modules)
+ GET / 200 in 5896ms
+ GET / 200 in 2853ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 747ms (478 modules)
+ GET /favicon.ico 200 in 1014ms
+ ○ Compiling /api/individual-lessons ...
+ ✓ Compiled /api/individual-lessons in 585ms (481 modules)
+ GET /api/individual-lessons 200 in 741ms
+ GET /api/availability 200 in 273ms
