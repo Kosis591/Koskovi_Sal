@@ -204,10 +204,6 @@ export function BookingDashboard({
     (activeAppMode === "lessons" || isBookingFormOpen);
   const activeSlotMinutes =
     activeAppMode === "lessons" ? 45 : hallSettings.slotMinutes;
-  const timeSlots = useMemo(
-    () => createTimeSlots(activeSlotMinutes),
-    [activeSlotMinutes],
-  );
   const currentDateKey = now ? formatDateKey(now) : "";
   const currentTimeMinutes = now
     ? now.getHours() * 60 + now.getMinutes()
@@ -295,6 +291,17 @@ export function BookingDashboard({
 
     return [...keys];
   }, [days, monthDays, todayDateKey]);
+  const timeSlots = useMemo(() => {
+    const visibleDateKeySet = new Set(visibleDateKeys);
+    const visibleBookingRanges = activeModeBookings
+      .filter((booking) => visibleDateKeySet.has(booking.date))
+      .map((booking) => ({
+        end: booking.end,
+        start: booking.start,
+      }));
+
+    return createTimeSlots(activeSlotMinutes, visibleBookingRanges);
+  }, [activeModeBookings, activeSlotMinutes, visibleDateKeys]);
   const bookingDayCounts = useMemo(() => {
     const counts = new Map<string, number>();
 
@@ -1714,14 +1721,14 @@ export function BookingDashboard({
                         </div>
                         <button
                           className={`relative min-h-14 border-l border-[#ece3d5] px-2 py-2 text-left text-xs transition ${
-                            !isOpen
-                              ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
-                              : booking
+                            booking
                                 ? `${getBookingCellStyle(booking, slotFill, true)} ${
                                     getSelectedBookingPeriodClass(booking)
                                   } relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                 : cleanupBooking
                                   ? `${cleanupCellStyle} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]`
+                                  : !isOpen
+                                    ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                                   : isDeparture
                                     ? "relative z-10 bg-[#fff6d8] text-[#6a4b00] ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.14),inset_0_3px_0_rgba(255,255,255,0.62)]"
                                   : "selected-period-cell relative z-10 bg-[#eef7fb] text-[#17475f] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.78),inset_0_-3px_0_rgba(11,77,118,0.14)] hover:bg-[#e5f2f8]"
@@ -1766,9 +1773,7 @@ export function BookingDashboard({
                               <span className="time-marker-line h-[2px] flex-1 bg-[#0b4d76] shadow-[0_1px_4px_rgba(0,55,88,0.35)]" />
                             </span>
                           ) : null}
-                          {!isOpen ? (
-                            <span className="block font-medium">Zavřeno</span>
-                          ) : booking ? (
+                          {booking ? (
                             <span className="relative z-10 block max-w-full overflow-hidden">
                               <span className="block truncate font-semibold">
                                 {statusLabels[booking.status]}
@@ -1786,6 +1791,8 @@ export function BookingDashboard({
                                 Po akci {cleanupBooking.title}
                               </span>
                             </span>
+                          ) : !isOpen ? (
+                            <span className="block font-medium">Zavřeno</span>
                           ) : isDeparture ? (
                             <span className="relative z-10 block max-w-full overflow-hidden">
                               <span className="block truncate font-semibold">
@@ -1883,11 +1890,7 @@ export function BookingDashboard({
                         return (
                           <button
                             className={`relative min-h-12 border-l border-[#ece3d5] px-1.5 py-1.5 text-left text-[11px] transition xl:px-2 xl:text-xs ${
-                              !isOpen
-                                ? isSelected
-                                  ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
-                                  : "bg-[#f3f0ea] text-[#9a9288]"
-                                  : booking
+                              booking
                                     ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                         isSelected
                                           ? `${
@@ -1901,6 +1904,10 @@ export function BookingDashboard({
                                             ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
                                             : ""
                                         }`
+                                      : !isOpen
+                                        ? isSelected
+                                          ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
+                                          : "bg-[#f3f0ea] text-[#9a9288]"
                                       : isDeparture
                                         ? isSelected
                                           ? "relative z-10 bg-[#fff6d8] text-[#6a4b00] ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.14),inset_0_3px_0_rgba(255,255,255,0.62)]"
@@ -1951,9 +1958,7 @@ export function BookingDashboard({
                                 <span className="time-marker-line h-[2px] flex-1 bg-[#0b4d76] shadow-[0_1px_4px_rgba(0,55,88,0.35)]" />
                               </span>
                             ) : null}
-                            {!isOpen ? (
-                              <span className="block font-medium">Zavřeno</span>
-                            ) : booking ? (
+                            {booking ? (
                               <span className="relative z-10 block max-w-full overflow-hidden">
                                 <span className="block truncate font-semibold">
                                   {statusLabels[booking.status]}
@@ -1971,6 +1976,8 @@ export function BookingDashboard({
                                   Po akci {cleanupBooking.title}
                                 </span>
                               </span>
+                            ) : !isOpen ? (
+                              <span className="block font-medium">Zavřeno</span>
                             ) : isDeparture ? (
                               <span className="relative z-10 block max-w-full overflow-hidden">
                                 <span className="block truncate font-semibold">
@@ -2081,11 +2088,7 @@ export function BookingDashboard({
                           return (
                             <button
                               className={`relative min-h-16 border-l border-[#ece3d5] px-1.5 py-3 text-left text-[11px] transition ${
-                                !isOpen
-                                  ? isSelected
-                                    ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
-                                    : "bg-[#f3f0ea] text-[#9a9288]"
-                                    : booking
+                                booking
                                       ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                           isSelected
                                             ? `${
@@ -2099,6 +2102,10 @@ export function BookingDashboard({
                                               ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]"
                                               : ""
                                           }`
+                                        : !isOpen
+                                          ? isSelected
+                                            ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
+                                            : "bg-[#f3f0ea] text-[#9a9288]"
                                         : isDeparture
                                           ? isSelected
                                             ? "relative z-10 bg-[#fff6d8] text-[#6a4b00] ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.14),inset_0_3px_0_rgba(255,255,255,0.62)]"
@@ -2149,11 +2156,7 @@ export function BookingDashboard({
                                   <span className="time-marker-line w-[2px] flex-1 bg-[#0b4d76] shadow-[1px_0_4px_rgba(0,55,88,0.35)]" />
                                 </span>
                               ) : null}
-                              {!isOpen ? (
-                                <span className="block truncate font-medium">
-                                  Zavřeno
-                                </span>
-                              ) : booking ? (
+                              {booking ? (
                                 <span className="relative z-10 block max-w-full overflow-hidden">
                                   <span className="block truncate font-semibold">
                                     {booking.title}
@@ -2170,6 +2173,10 @@ export function BookingDashboard({
                                   <span className="mt-0.5 block truncate">
                                     Po akci
                                   </span>
+                                </span>
+                              ) : !isOpen ? (
+                                <span className="block truncate font-medium">
+                                  Zavřeno
                                 </span>
                               ) : isDeparture ? (
                                 <span className="relative z-10 block max-w-full overflow-hidden">

@@ -145,8 +145,9 @@ export function getDayAvailabilitySegments(
 ): DayAvailabilitySegment[] {
   const date = new Date(`${dateKey}T12:00:00`);
   const openingHours = getOpeningHoursForDate(date);
+  const dayBookings = bookingList.filter((booking) => booking.date === dateKey);
 
-  if (!openingHours) {
+  if (!openingHours && dayBookings.length === 0) {
     return [
       {
         end: "23:59",
@@ -158,21 +159,31 @@ export function getDayAvailabilitySegments(
   }
 
   const segments: DayAvailabilitySegment[] = [];
-  const slots = createTimeSlots(slotMinutes).filter((time) =>
-    isSlotOpen(date, time),
+  const slots = createTimeSlots(
+    slotMinutes,
+    dayBookings.map((booking) => ({
+      end: booking.end,
+      start: booking.start,
+    })),
   );
 
   for (const slot of slots) {
-    if (slot < openingHours.start || slot >= openingHours.end) {
+    const isOpen = isSlotOpen(date, slot);
+    const rawSlotEnd = addMinutes(slot, slotMinutes);
+    const booking = isSlotBooked(bookingList, dateKey, slot, slotMinutes);
+    const isDeparture = isDepartureSlot(date, slot, slotMinutes);
+    const cleanupBooking = isOpen && !booking
+      ? getPendingCleanupBooking(bookingList, dateKey, slot, slotMinutes)
+      : undefined;
+
+    if (!isOpen && !booking && !cleanupBooking) {
       continue;
     }
 
-    const slotEnd = minTime(addMinutes(slot, slotMinutes), openingHours.end);
-    const booking = isSlotBooked(bookingList, dateKey, slot, slotMinutes);
-    const isDeparture = isDepartureSlot(date, slot, slotMinutes);
-    const cleanupBooking = !booking
-      ? getPendingCleanupBooking(bookingList, dateKey, slot, slotMinutes)
-      : undefined;
+    const slotEnd =
+      isOpen && openingHours
+        ? minTime(rawSlotEnd, openingHours.end)
+        : rawSlotEnd;
     const nextSegment: DayAvailabilitySegment = booking
       ? {
           bookingId: booking.id,
@@ -215,6 +226,19 @@ export function getDayAvailabilitySegments(
     }
 
     segments.push(nextSegment);
+  }
+
+  if (!openingHours) {
+    return segments.length > 0
+      ? segments
+      : [
+          {
+            end: "23:59",
+            kind: "closed",
+            start: "00:00",
+            title: "ZavĹ™eno",
+          },
+        ];
   }
 
   return segments.length > 0

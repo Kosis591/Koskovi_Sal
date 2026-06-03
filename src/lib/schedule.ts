@@ -92,12 +92,25 @@ export const bookings: Booking[] = [
   },
 ];
 
-export function createTimeSlots(slotMinutes = hallSettings.slotMinutes) {
+export function createTimeSlots(
+  slotMinutes = hallSettings.slotMinutes,
+  extraRanges: Array<{ end: string; start: string }> = [],
+) {
   const slots: string[] = [];
   const starts = hallSettings.openingHours.map((hours) =>
     timeToMinutes(hours.start),
   );
   const ends = hallSettings.openingHours.map((hours) => timeToMinutes(hours.end));
+  starts.push(
+    ...extraRanges.map((range) =>
+      floorToSlot(timeToMinutes(range.start), slotMinutes),
+    ),
+  );
+  ends.push(
+    ...extraRanges.map((range) =>
+      ceilToSlot(timeToMinutes(range.end), slotMinutes),
+    ),
+  );
   const firstSlot = Math.min(...starts);
   const lastSlot = Math.max(...ends);
 
@@ -303,6 +316,14 @@ export function formatOpeningHoursForDate(date: Date) {
 function timeToMinutes(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+function floorToSlot(totalMinutes: number, slotMinutes: number) {
+  return Math.floor(totalMinutes / slotMinutes) * slotMinutes;
+}
+
+function ceilToSlot(totalMinutes: number, slotMinutes: number) {
+  return Math.ceil(totalMinutes / slotMinutes) * slotMinutes;
 }
 
 function minutesToTime(totalMinutes: number) {
