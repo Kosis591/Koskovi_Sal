@@ -32,8 +32,8 @@ export const cancellationDateFormatter = new Intl.DateTimeFormat("cs-CZ", {
 });
 
 export const statusStyles = {
-  confirmed: "border-[#df5d42] bg-[#fff0eb] text-[#8c2f20]",
-  maintenance: "border-[#79818a] bg-[#f1f3f5] text-[#3d4650]",
+  confirmed: "border-[#6fa8d5] bg-[#e7f1fb] text-[#0b4d76]",
+  maintenance: "border-[#df5d42] bg-[#fff0eb] text-[#8c2f20]",
 };
 
 export const recurringTrainingStyle =
@@ -41,7 +41,7 @@ export const recurringTrainingStyle =
 
 export const statusLabels = {
   confirmed: "Obsazeno",
-  maintenance: "Servis",
+  maintenance: "Obsazeno",
 };
 
 export const cleanupCellStyle =
@@ -49,8 +49,8 @@ export const cleanupCellStyle =
 
 const slotFillStyles = {
   cleanup: "bg-[#f0c96b]/45",
-  confirmed: "bg-[#fff0eb]",
-  maintenance: "bg-[#f1f3f5]",
+  confirmed: "bg-[#e7f1fb]",
+  maintenance: "bg-[#fff0eb]",
   recurring: "bg-[#e7f1fb]",
 };
 
@@ -249,6 +249,16 @@ export function getSegmentStyle(segment: DayAvailabilitySegment) {
   return statusStyles[segment.status];
 }
 
+export function getSelectedBookingPeriodClass(booking: Booking) {
+  if (isRecurringBookingId(booking.id)) {
+    return "selected-period-training";
+  }
+
+  return booking.status === "maintenance"
+    ? "selected-period-booked"
+    : "selected-period-club";
+}
+
 export function getBookingCellStyle(
   booking: Booking,
   slotFill: ReturnType<typeof getSlotFill>,
@@ -258,9 +268,9 @@ export function getBookingCellStyle(
   const textStyle =
     isRecurringTraining
       ? "text-[#0b4d76]"
-      : booking.status === "confirmed"
+      : booking.status === "maintenance"
         ? "text-[#8c2f20]"
-        : "text-[#3d4650]";
+        : "text-[#0b4d76]";
 
   return slotFill && slotFill.width < 100
     ? `${

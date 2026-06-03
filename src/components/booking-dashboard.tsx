@@ -35,6 +35,7 @@ import {
   getMonthDays,
   getOccupancyNotice,
   getSegmentStyle,
+  getSelectedBookingPeriodClass,
   getSlotFill,
   getSlotStateKey,
   getWeekStartDate,
@@ -1717,9 +1718,7 @@ export function BookingDashboard({
                               ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                               : booking
                                 ? `${getBookingCellStyle(booking, slotFill, true)} ${
-                                    isRecurringBookingId(booking.id)
-                                      ? "selected-period-training"
-                                      : "selected-period-booked"
+                                    getSelectedBookingPeriodClass(booking)
                                   } relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                 : cleanupBooking
                                   ? `${cleanupCellStyle} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]`
@@ -1892,9 +1891,7 @@ export function BookingDashboard({
                                     ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                         isSelected
                                           ? `${
-                                              isRecurringBookingId(booking.id)
-                                                ? "selected-period-training"
-                                                : "selected-period-booked"
+                                              getSelectedBookingPeriodClass(booking)
                                             } relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                           : ""
                                       }`
@@ -2092,9 +2089,7 @@ export function BookingDashboard({
                                       ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                           isSelected
                                             ? `${
-                                                isRecurringBookingId(booking.id)
-                                                  ? "selected-period-training"
-                                                  : "selected-period-booked"
+                                                getSelectedBookingPeriodClass(booking)
                                               } relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                             : ""
                                         }`
@@ -2599,7 +2594,8 @@ export function BookingDashboard({
                         <select
                           className="field-input mt-1"
                           onChange={(event) => {
-                            const eventType = event.target.value;
+                            const eventType = event.target
+                              .value as BookingRequest["eventType"];
                             setSubmitMessage("");
                             setRequest((current) => ({
                               ...current,

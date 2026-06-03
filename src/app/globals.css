@@ -316,6 +316,17 @@ html[data-theme="dark"] .selected-period-training {
     inset 0 -3px 0 rgba(143, 200, 236, 0.28) !important;
 }
 
+html.dark .selected-period-club,
+html[data-theme="dark"] .selected-period-club {
+  border-color: #8fc8ec !important;
+  background-color: #17304a !important;
+  color: #e1f2ff !important;
+  box-shadow:
+    0 9px 18px rgba(0, 0, 0, 0.32),
+    inset 0 3px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -3px 0 rgba(143, 200, 236, 0.28) !important;
+}
+
 html.dark .time-marker-dot,
 html.dark .time-marker-line,
 html[data-theme="dark"] .time-marker-dot,

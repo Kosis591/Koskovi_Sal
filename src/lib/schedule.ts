@@ -1,5 +1,6 @@
 export type BookingStatus = "confirmed" | "maintenance";
 export type BookingKind = "hall" | "individual-lesson";
+export type HallEventType = "soustredeni" | "seminar" | "obsazeno";
 
 export type Booking = {
   cleanedAt?: string;
@@ -14,6 +15,7 @@ export type Booking = {
   date: string;
   start: string;
   end: string;
+  eventType?: HallEventType;
   status: BookingStatus;
   note?: string;
   recurringKey?: string;
@@ -27,7 +29,7 @@ export type BookingRequest = {
   date: string;
   start: string;
   end: string;
-  eventType: string;
+  eventType: HallEventType | "tanecni-lekce";
   bookingKind?: BookingKind;
   trainer?: string;
   note: string;

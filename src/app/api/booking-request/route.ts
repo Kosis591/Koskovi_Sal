@@ -58,6 +58,10 @@ export async function POST(request: NextRequest) {
     isIndividualLesson || payload.eventType === "seminar"
       ? payload.trainer
       : undefined;
+  const hallEventType =
+    !isIndividualLesson && isHallEventType(payload.eventType)
+      ? payload.eventType
+      : undefined;
 
   const result = await createBooking({
     title: payload.name,
@@ -69,6 +73,7 @@ export async function POST(request: NextRequest) {
     bookingKind:
       isIndividualLesson ? "individual-lesson" : "hall",
     createdBy: actor,
+    eventType: hallEventType,
     status: payload.eventType === "obsazeno" ? "maintenance" : "confirmed",
     trainer,
     note: [trainer ? `Trenér: ${trainer}` : null, payload.note]
