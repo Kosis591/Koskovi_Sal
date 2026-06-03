@@ -42,3 +42,7 @@ Vymazana Next.js cache: .next
  ✓ Compiled /api/individual-lessons in 585ms (481 modules)
  GET /api/individual-lessons 200 in 741ms
  GET /api/availability 200 in 273ms
+ GET /api/availability 200 in 551ms
+ GET /api/availability 200 in 26ms
+ GET /api/availability 200 in 23ms
+ GET /api/availability 200 in 22ms
