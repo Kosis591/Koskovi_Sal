@@ -1162,42 +1162,47 @@ export function BookingDashboard({
           </div>
           {isAuthenticated ? (
             <div className="rounded-md border border-[#ded6c9] bg-white px-3 py-2 text-sm text-[#66706f]">
-              <div className="flex flex-wrap items-center gap-2">
-                <span>Jsi přihlášen jako: {sessionUsername ?? "uživatel"}</span>
-                <button
-                  className="inline-flex h-9 items-center justify-center rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
-                  onClick={() => setAccountPanelOpen((current) => !current)}
-                  type="button"
-                >
-                  Profil
-                </button>
-                {canManageBookings && activeAppMode === "hall" ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>Jsi přihlášen jako: {sessionUsername ?? "uživatel"}</span>
                   <button
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#003758] bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76] disabled:border-[#c9dce7] disabled:bg-[#eef6fa] disabled:text-[#7a9aad] disabled:cursor-not-allowed"
-                    disabled={isBookingFormOpen}
-                    onClick={scrollToBookingForm}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                    onClick={() => setAccountPanelOpen((current) => !current)}
                     type="button"
                   >
-                    <CalendarPlus size={15} />
-                    {isBookingFormOpen ? "Formulář otevřený" : "Přidat akci"}
+                    <LockKeyhole size={14} />
+                    Změna hesla
                   </button>
-                ) : null}
-                {canManageBookings ? (
-                  <Link
-                    className="inline-flex h-9 items-center justify-center rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76]"
-                    href="/admin"
+                  <button
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#fff0eb]"
+                    onClick={handleLogout}
+                    type="button"
                   >
-                    Otevřít správu
-                  </Link>
+                    <LogOut size={14} />
+                    Odhlásit
+                  </button>
+                </div>
+                {canManageBookings ? (
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <Link
+                      className="inline-flex h-9 items-center justify-center rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76]"
+                      href="/admin"
+                    >
+                      Otevřít správu
+                    </Link>
+                    {activeAppMode === "hall" ? (
+                      <button
+                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#003758] bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:border-[#c9dce7] disabled:bg-[#eef6fa] disabled:text-[#7a9aad]"
+                        disabled={isBookingFormOpen}
+                        onClick={scrollToBookingForm}
+                        type="button"
+                      >
+                        <CalendarPlus size={15} />
+                        {isBookingFormOpen ? "Formulář otevřený" : "Přidat akci"}
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
-                <button
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#ded6c9] px-3 text-xs font-semibold text-[#8c2f20] transition hover:bg-[#fff0eb]"
-                  onClick={handleLogout}
-                  type="button"
-                >
-                  <LogOut size={14} />
-                  Odhlásit
-                </button>
               </div>
 
               {accountPanelOpen ? (
@@ -1711,7 +1716,11 @@ export function BookingDashboard({
                             !isOpen
                               ? "selected-period-closed relative z-10 bg-[#e3edf3] text-[#6c747b] ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.75),inset_0_-3px_0_rgba(11,77,118,0.14)]"
                               : booking
-                                ? `${getBookingCellStyle(booking, slotFill, true)} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
+                                ? `${getBookingCellStyle(booking, slotFill, true)} ${
+                                    isRecurringBookingId(booking.id)
+                                      ? "selected-period-training"
+                                      : "selected-period-booked"
+                                  } relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                 : cleanupBooking
                                   ? `${cleanupCellStyle} selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#e1b554] shadow-[0_9px_18px_rgba(106,75,0,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(106,75,0,0.12)]`
                                   : isDeparture
@@ -1882,7 +1891,11 @@ export function BookingDashboard({
                                   : booking
                                     ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                         isSelected
-                                          ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]"
+                                          ? `${
+                                              isRecurringBookingId(booking.id)
+                                                ? "selected-period-training"
+                                                : "selected-period-booked"
+                                            } relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                           : ""
                                       }`
                                     : cleanupBooking
@@ -2078,7 +2091,11 @@ export function BookingDashboard({
                                     : booking
                                       ? `${getBookingCellStyle(booking, slotFill, isSelected)} ${
                                           isSelected
-                                            ? "selected-period-booked relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]"
+                                            ? `${
+                                                isRecurringBookingId(booking.id)
+                                                  ? "selected-period-training"
+                                                  : "selected-period-booked"
+                                              } relative z-10 overflow-hidden ring-1 ring-[#b9d9e8] shadow-[0_9px_18px_rgba(0,55,88,0.18),inset_0_3px_0_rgba(255,255,255,0.60),inset_0_-3px_0_rgba(11,77,118,0.14)]`
                                             : ""
                                         }`
                                       : cleanupBooking

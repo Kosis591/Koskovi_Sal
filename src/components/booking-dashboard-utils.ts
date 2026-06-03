@@ -36,6 +36,9 @@ export const statusStyles = {
   maintenance: "border-[#79818a] bg-[#f1f3f5] text-[#3d4650]",
 };
 
+export const recurringTrainingStyle =
+  "border-[#6fa8d5] bg-[#e7f1fb] text-[#0b4d76]";
+
 export const statusLabels = {
   confirmed: "Obsazeno",
   maintenance: "Servis",
@@ -48,6 +51,7 @@ const slotFillStyles = {
   cleanup: "bg-[#f0c96b]/45",
   confirmed: "bg-[#fff0eb]",
   maintenance: "bg-[#f1f3f5]",
+  recurring: "bg-[#e7f1fb]",
 };
 
 const partialAvailableCellStyle = "bg-white";
@@ -238,6 +242,10 @@ export function getSegmentStyle(segment: DayAvailabilitySegment) {
     return "";
   }
 
+  if (isRecurringBookingId(segment.bookingId)) {
+    return recurringTrainingStyle;
+  }
+
   return statusStyles[segment.status];
 }
 
@@ -246,14 +254,21 @@ export function getBookingCellStyle(
   slotFill: ReturnType<typeof getSlotFill>,
   isSelected: boolean,
 ) {
+  const isRecurringTraining = isRecurringBookingId(booking.id);
   const textStyle =
-    booking.status === "confirmed" ? "text-[#8c2f20]" : "text-[#3d4650]";
+    isRecurringTraining
+      ? "text-[#0b4d76]"
+      : booking.status === "confirmed"
+        ? "text-[#8c2f20]"
+        : "text-[#3d4650]";
 
   return slotFill && slotFill.width < 100
     ? `${
         isSelected ? selectedPartialAvailableCellStyle : partialAvailableCellStyle
       } ${textStyle}`
-    : statusStyles[booking.status];
+    : isRecurringTraining
+      ? recurringTrainingStyle
+      : statusStyles[booking.status];
 }
 
 export function getCurrentTimeOffset(
@@ -319,7 +334,9 @@ export function getSlotFill(
 
   return {
     className: booking
-      ? slotFillStyles[booking.status]
+      ? isRecurringBookingId(booking.id)
+        ? slotFillStyles.recurring
+        : slotFillStyles[booking.status]
       : slotFillStyles.cleanup,
     left: ((overlapStart - slotStartMinutes) / slotMinutes) * 100,
     width,

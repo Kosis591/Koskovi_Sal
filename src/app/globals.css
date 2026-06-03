@@ -184,6 +184,11 @@ html[data-theme="dark"] [class*="bg-[#f1faf2]"] {
   background-color: #1d2a23 !important;
 }
 
+html.dark [class*="bg-[#e7f1fb]"],
+html[data-theme="dark"] [class*="bg-[#e7f1fb]"] {
+  background-color: #172b3e !important;
+}
+
 html.dark [class*="bg-[#fff0eb]"],
 html[data-theme="dark"] [class*="bg-[#fff0eb]"],
 html.dark [class*="bg-[#fff8df]"],
@@ -240,6 +245,11 @@ html[data-theme="dark"] [class*="text-[#003758]"] {
   color: #91c4e6 !important;
 }
 
+html.dark [class*="text-[#0b4d76]"],
+html[data-theme="dark"] [class*="text-[#0b4d76]"] {
+  color: #acd7f5 !important;
+}
+
 html.dark [class*="text-[#246043]"],
 html[data-theme="dark"] [class*="text-[#246043]"],
 html.dark [class*="text-[#245d3f]"],
@@ -293,6 +303,17 @@ html[data-theme="dark"] .selected-period-booked {
     0 9px 18px rgba(0, 0, 0, 0.32),
     inset 0 3px 0 rgba(255, 255, 255, 0.1),
     inset 0 -3px 0 rgba(255, 156, 132, 0.26) !important;
+}
+
+html.dark .selected-period-training,
+html[data-theme="dark"] .selected-period-training {
+  border-color: #8fc8ec !important;
+  background-color: #17304a !important;
+  color: #e1f2ff !important;
+  box-shadow:
+    0 9px 18px rgba(0, 0, 0, 0.32),
+    inset 0 3px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -3px 0 rgba(143, 200, 236, 0.28) !important;
 }
 
 html.dark .time-marker-dot,
