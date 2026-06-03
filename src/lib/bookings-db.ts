@@ -44,13 +44,21 @@ export type RecurringHoliday = {
 export type RecurringOverrideNotice = {
   date: string;
   end: string;
+  hasTimeChange: boolean;
+  hasTitleChange: boolean;
   id: string;
   newTitle: string;
+  originalEnd: string;
+  originalStart: string;
   originalTitle: string;
   start: string;
 };
 type RecurringBookingOverride = {
+  end?: string;
+  originalEnd?: string;
+  originalStart?: string;
   originalTitle?: string;
+  start?: string;
   title?: string;
   trainer?: string;
 };
@@ -99,18 +107,23 @@ export async function getRecurringOverrideNotices() {
   const overrides = await readRecurringOverrides();
 
   return Object.entries(overrides)
-    .filter(([, override]) => Boolean(override.title && override.originalTitle))
     .map(([id, override]) => {
       const recurringNotice = createRecurringCancellationNotice(id);
+      const hasTitleChange = Boolean(override.title && override.originalTitle);
+      const hasTimeChange = Boolean(override.start || override.end);
 
-      return recurringNotice
+      return recurringNotice && (hasTitleChange || hasTimeChange)
         ? {
             date: recurringNotice.date,
-            end: recurringNotice.end,
+            end: override.end ?? recurringNotice.end,
+            hasTimeChange,
+            hasTitleChange,
             id,
-            newTitle: override.title ?? "",
-            originalTitle: override.originalTitle ?? "",
-            start: recurringNotice.start,
+            newTitle: override.title ?? recurringNotice.title,
+            originalEnd: recurringNotice.end,
+            originalStart: recurringNotice.start,
+            originalTitle: override.originalTitle ?? recurringNotice.title,
+            start: override.start ?? recurringNotice.start,
           }
         : null;
     })
@@ -257,6 +270,55 @@ export async function updateBooking(id: string, input: BookingInput) {
     await writeBookings(bookings);
 
     return { booking, conflict: null, notFound: false };
+  });
+}
+
+export async function updateBookingTime(id: string, start: string, end: string) {
+  return withDatabaseLock(async () => {
+    const bookings = await readBookings();
+    const index = bookings.findIndex((booking) => booking.id === id);
+
+    if (index === -1) {
+      return { booking: null, conflict: null, notFound: true };
+    }
+
+    const previousBooking = bookings[index];
+    const candidate: Booking = {
+      ...previousBooking,
+      end,
+      start,
+      updatedAt: new Date().toISOString(),
+    };
+    const conflict = findBookingConflict(bookings, candidate, id);
+
+    if (conflict) {
+      return { booking: null, conflict, notFound: false };
+    }
+
+    if (id.startsWith("recurring-")) {
+      const hasTimeChange =
+        start !== previousBooking.start || end !== previousBooking.end;
+
+      await updateRecurringOverride(id, {
+        end: hasTimeChange ? end : undefined,
+        originalEnd: hasTimeChange ? previousBooking.end : undefined,
+        originalStart: hasTimeChange ? previousBooking.start : undefined,
+        start: hasTimeChange ? start : undefined,
+      });
+
+      const nextBookings = await readBookings();
+
+      return {
+        booking: nextBookings.find((booking) => booking.id === id) ?? null,
+        conflict: null,
+        notFound: false,
+      };
+    }
+
+    bookings[index] = candidate;
+    await writeBookings(bookings);
+
+    return { booking: candidate, conflict: null, notFound: false };
   });
 }
 
@@ -596,11 +658,15 @@ function buildRecurringBooking(
     ""
   ).trim();
   const title = recurringOverrides[booking.id]?.title?.trim() || booking.title;
+  const start = recurringOverrides[booking.id]?.start?.trim() || booking.start;
+  const end = recurringOverrides[booking.id]?.end?.trim() || booking.end;
 
   return {
     ...booking,
+    end,
     note: trainer ? `${booking.note}\nTrenér: ${trainer}` : booking.note,
     recurringKey: key,
+    start,
     title,
     trainer: trainer || undefined,
   };
@@ -674,6 +740,22 @@ async function updateRecurringOverride(
     ...override,
   };
 
+  if (!nextOverride.end) {
+    delete nextOverride.end;
+  }
+
+  if (!nextOverride.originalEnd) {
+    delete nextOverride.originalEnd;
+  }
+
+  if (!nextOverride.originalStart) {
+    delete nextOverride.originalStart;
+  }
+
+  if (!nextOverride.start) {
+    delete nextOverride.start;
+  }
+
   if (!nextOverride.trainer) {
     delete nextOverride.trainer;
   }
@@ -731,6 +813,10 @@ function normalizeRecurringOverrides(overrides: RecurringBookingOverrides) {
     }
 
     const trainer = override.trainer?.trim();
+    const start = override.start?.trim();
+    const end = override.end?.trim();
+    const originalStart = override.originalStart?.trim();
+    const originalEnd = override.originalEnd?.trim();
     const title = override.title?.trim();
     const originalTitle = override.originalTitle?.trim();
     const normalizedOverride: RecurringBookingOverride = {};
@@ -742,6 +828,24 @@ function normalizeRecurringOverrides(overrides: RecurringBookingOverrides) {
     if (title && originalTitle && title !== originalTitle) {
       normalizedOverride.title = title;
       normalizedOverride.originalTitle = originalTitle;
+    }
+
+    if (
+      start &&
+      end &&
+      originalStart &&
+      originalEnd &&
+      isTimeValue(start) &&
+      isTimeValue(end) &&
+      isTimeValue(originalStart) &&
+      isTimeValue(originalEnd) &&
+      start < end &&
+      (start !== originalStart || end !== originalEnd)
+    ) {
+      normalizedOverride.end = end;
+      normalizedOverride.originalEnd = originalEnd;
+      normalizedOverride.originalStart = originalStart;
+      normalizedOverride.start = start;
     }
 
     if (Object.keys(normalizedOverride).length > 0) {
@@ -810,6 +914,10 @@ function isRecurringHolidayDate(dateKey: string, holidays: RecurringHoliday[]) {
 
 function isDateKey(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isTimeValue(value: string) {
+  return /^\d{2}:\d{2}$/.test(value);
 }
 
 async function writeRecurringCancellations(ids: string[]) {

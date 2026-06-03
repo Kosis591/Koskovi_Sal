@@ -45,6 +45,7 @@ export function RecurringCancellationPanel({
             <RefreshCw size={17} />
             Změna pravidelné aktivity
           </p>
+          {change.hasTitleChange ? (
           <p className="mt-1 text-[#806015]">
             {change.originalTitle} se v datu{" "}
             {cancellationDateFormatter.format(
@@ -53,6 +54,16 @@ export function RecurringCancellationPanel({
             od {change.start} do {change.end} mění na{" "}
             <strong>{change.newTitle}</strong>.
           </p>
+          ) : null}
+          {change.hasTimeChange ? (
+            <p className="mt-1 text-[#806015]">
+              Čas se mění z {change.originalStart}-{change.originalEnd} na{" "}
+              <strong>
+                {change.start}-{change.end}
+              </strong>
+              .
+            </p>
+          ) : null}
         </div>
       ))}
       {cancellations.map((cancellation) => (

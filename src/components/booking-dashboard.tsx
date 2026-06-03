@@ -162,10 +162,15 @@ export function BookingDashboard({
   const [reinstatingBookingId, setReinstatingBookingId] = useState("");
   const [savingTrainerBookingId, setSavingTrainerBookingId] = useState("");
   const [savingTitleBookingId, setSavingTitleBookingId] = useState("");
+  const [savingTimeBookingId, setSavingTimeBookingId] = useState("");
   const [bookingTitleDrafts, setBookingTitleDrafts] = useState<
     Record<string, string>
   >({});
+  const [bookingTimeDrafts, setBookingTimeDrafts] = useState<
+    Record<string, { end: string; start: string }>
+  >({});
   const [trainerMessage, setTrainerMessage] = useState("");
+  const [timeMessage, setTimeMessage] = useState("");
   const [titleMessage, setTitleMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pastedLessonTable, setPastedLessonTable] = useState("");
@@ -898,6 +903,57 @@ export function BookingDashboard({
       await syncCalendar();
     } finally {
       setSavingTitleBookingId("");
+    }
+  }
+
+  async function handleUpdateBookingTime(
+    bookingId: string,
+    currentStart: string,
+    currentEnd: string,
+  ) {
+    const draft = bookingTimeDrafts[bookingId] ?? {
+      end: currentEnd,
+      start: currentStart,
+    };
+    const start = draft.start.trim();
+    const end = draft.end.trim();
+
+    if (!start || !end || (start === currentStart && end === currentEnd)) {
+      return;
+    }
+
+    if (start >= end) {
+      setTimeMessage("Konec akce musí být později než začátek.");
+      return;
+    }
+
+    setTimeMessage("");
+    setSavingTimeBookingId(bookingId);
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/time`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ end, start }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { message?: string };
+        setTimeMessage(data.message ?? "Čas akce se nepodařilo uložit.");
+        return;
+      }
+
+      setTimeMessage("Čas akce je uložený.");
+      setBookingTimeDrafts((current) => {
+        const next = { ...current };
+        delete next[bookingId];
+        return next;
+      });
+      await syncCalendar();
+    } finally {
+      setSavingTimeBookingId("");
     }
   }
 
@@ -2382,6 +2438,75 @@ export function BookingDashboard({
                           }
                         />
                       </label>
+                      <div className="grid min-w-0 grid-cols-2 gap-2">
+                        <label className="block min-w-0 text-xs font-semibold">
+                          Od
+                          <input
+                            className="field-input mt-1 min-h-8 w-full min-w-0 py-1 text-xs"
+                            onChange={(event) =>
+                              setBookingTimeDrafts((current) => ({
+                                ...current,
+                                [segment.bookingId]: {
+                                  end:
+                                    current[segment.bookingId]?.end ??
+                                    segment.end,
+                                  start: event.target.value,
+                                },
+                              }))
+                            }
+                            type="time"
+                            value={
+                              bookingTimeDrafts[segment.bookingId]?.start ??
+                              segment.start
+                            }
+                          />
+                        </label>
+                        <label className="block min-w-0 text-xs font-semibold">
+                          Do
+                          <input
+                            className="field-input mt-1 min-h-8 w-full min-w-0 py-1 text-xs"
+                            onChange={(event) =>
+                              setBookingTimeDrafts((current) => ({
+                                ...current,
+                                [segment.bookingId]: {
+                                  end: event.target.value,
+                                  start:
+                                    current[segment.bookingId]?.start ??
+                                    segment.start,
+                                },
+                              }))
+                            }
+                            type="time"
+                            value={
+                              bookingTimeDrafts[segment.bookingId]?.end ??
+                              segment.end
+                            }
+                          />
+                        </label>
+                      </div>
+                      <button
+                        className="inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-2.5 py-1.5 text-xs font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={
+                          savingTimeBookingId === segment.bookingId ||
+                          ((bookingTimeDrafts[segment.bookingId]?.start ??
+                            segment.start) === segment.start &&
+                            (bookingTimeDrafts[segment.bookingId]?.end ??
+                              segment.end) === segment.end)
+                        }
+                        onClick={() =>
+                          handleUpdateBookingTime(
+                            segment.bookingId,
+                            segment.start,
+                            segment.end,
+                          )
+                        }
+                        type="button"
+                      >
+                        <Save size={13} />
+                        {savingTimeBookingId === segment.bookingId
+                          ? "Ukládám..."
+                          : "Uložit čas"}
+                      </button>
                       <button
                         className="inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border border-[#c9dce7] bg-[#eef6fa] px-2.5 py-1.5 text-xs font-semibold text-[#003758] transition hover:bg-[#dceef7] disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={
@@ -2451,6 +2576,12 @@ export function BookingDashboard({
             {trainerMessage ? (
               <p className="mt-3 rounded-md border border-[#cbe3d1] bg-[#f1faf2] px-3 py-2 text-xs font-semibold text-[#245d3f]">
                 {trainerMessage}
+              </p>
+            ) : null}
+
+            {timeMessage ? (
+              <p className="mt-3 rounded-md border border-[#dfc36b] bg-[#fff6d8] px-3 py-2 text-xs font-semibold text-[#5e4300]">
+                {timeMessage}
               </p>
             ) : null}
 
