@@ -368,6 +368,14 @@ export async function markBookingCleaned(id: string) {
       return { booking, notFound: false };
     }
 
+    if (!hasBookingEndedInPrague(booking)) {
+      return {
+        booking,
+        cleanupNotReady: true,
+        notFound: false,
+      };
+    }
+
     const updatedBooking = {
       ...booking,
       cleanedAt: new Date().toISOString(),
@@ -943,6 +951,46 @@ function timeRangesOverlap(
   rightEnd: string,
 ) {
   return leftStart < rightEnd && leftEnd > rightStart;
+}
+
+function hasBookingEndedInPrague(booking: Booking) {
+  const current = getCurrentPragueDateAndMinutes();
+
+  if (booking.date < current.dateKey) {
+    return true;
+  }
+
+  if (booking.date > current.dateKey) {
+    return false;
+  }
+
+  return timeToMinutes(booking.end) <= current.minutes;
+}
+
+function getCurrentPragueDateAndMinutes() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Prague",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+
+  return {
+    dateKey: `${values.year}-${values.month}-${values.day}`,
+    minutes: Number(values.hour) * 60 + Number(values.minute),
+  };
+}
+
+function timeToMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+
+  return hours * 60 + minutes;
 }
 
 function removePastBookings(bookings: Booking[]) {

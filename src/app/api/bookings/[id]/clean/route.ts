@@ -14,6 +14,13 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ message: "Akce nenalezena." }, { status: 404 });
   }
 
+  if (result.cleanupNotReady) {
+    return NextResponse.json(
+      { message: "Sál půjde označit jako uklizený až po skončení akce." },
+      { status: 409 },
+    );
+  }
+
   if (result.booking) {
     await appendAuditLog({
       action: "booking.clean",

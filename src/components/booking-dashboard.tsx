@@ -2290,23 +2290,47 @@ export function BookingDashboard({
                         </button>
                       </div>
                     ) : null}
-                    {segment.kind === "cleanup" && segment.cleanupBookingId ? (
-                      <button
-                        className="mt-2 inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-[#003758] px-3 text-xs font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:opacity-70"
-                        disabled={cleaningBookingId === segment.cleanupBookingId}
-                        onClick={() =>
-                          segment.cleanupBookingId
-                            ? handleMarkCleaned(segment.cleanupBookingId)
-                            : undefined
-                        }
-                        type="button"
-                      >
-                        <Check size={13} />
-                        {cleaningBookingId === segment.cleanupBookingId
-                          ? "Potvrzuji..."
-                          : "Uklidil jsem sál"}
-                      </button>
-                    ) : null}
+                    {segment.kind === "cleanup" && segment.cleanupBookingId
+                      ? (() => {
+                          const cleanupSourceBooking = calendarBookings.find(
+                            (booking) => booking.id === segment.cleanupBookingId,
+                          );
+                          const canConfirmCleanup =
+                            cleanupSourceBooking &&
+                            hasBookingEndedForClient(
+                              cleanupSourceBooking,
+                              currentDateKey,
+                              currentTimeMinutes,
+                            );
+                          const isCleaning =
+                            cleaningBookingId === segment.cleanupBookingId;
+
+                          return (
+                            <button
+                              className="mt-2 inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md bg-[#003758] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:opacity-70"
+                              disabled={isCleaning || !canConfirmCleanup}
+                              onClick={() =>
+                                segment.cleanupBookingId
+                                  ? handleMarkCleaned(segment.cleanupBookingId)
+                                  : undefined
+                              }
+                              title={
+                                canConfirmCleanup
+                                  ? undefined
+                                  : "Úklid lze potvrdit až po skončení akce."
+                              }
+                              type="button"
+                            >
+                              <Check size={13} />
+                              {isCleaning
+                                ? "Potvrzuji..."
+                                : canConfirmCleanup
+                                  ? "Uklidil jsem sál"
+                                  : "Až po skončení akce"}
+                            </button>
+                          );
+                        })()
+                      : null}
                   </div>
                   {canManageBookings &&
                   segment.kind === "booked" &&
@@ -2845,6 +2869,26 @@ function parseTimeRange(value: string) {
     end: `${match[3].padStart(2, "0")}:${match[4]}`,
     start: `${match[1].padStart(2, "0")}:${match[2]}`,
   };
+}
+
+function hasBookingEndedForClient(
+  booking: Booking,
+  currentDateKey: string,
+  currentTimeMinutes: number | null,
+) {
+  if (!currentDateKey || currentTimeMinutes === null) {
+    return false;
+  }
+
+  if (booking.date < currentDateKey) {
+    return true;
+  }
+
+  if (booking.date > currentDateKey) {
+    return false;
+  }
+
+  return timeToMinutes(booking.end) <= currentTimeMinutes;
 }
 
 function normalizeTableHeader(value: string) {
