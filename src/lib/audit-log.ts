@@ -1,8 +1,12 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
+import {
+  appendDataText,
+  ensureDataStorage,
+  getDataTextSize,
+  readDataText,
+  writeDataText,
+} from "@/lib/runtime-storage";
 
-const dataDir = path.join(process.cwd(), "data");
-const auditLogFile = path.join(dataDir, "audit-log.jsonl");
+const auditLogFile = "audit-log.jsonl";
 const maxAuditLogBytes = 100 * 1024 * 1024;
 const targetTrimBytes = 75 * 1024 * 1024;
 
@@ -30,14 +34,14 @@ export async function appendAuditLog(
     timestamp: new Date().toISOString(),
   })}\n`;
 
-  await mkdir(dataDir, { recursive: true });
+  await ensureDataStorage();
   await trimAuditLogIfNeeded(Buffer.byteLength(nextEntry));
-  await writeFile(auditLogFile, nextEntry, { flag: "a" });
+  await appendDataText(auditLogFile, nextEntry);
 }
 
 export async function readAuditLog(limit = 100) {
   try {
-    const content = await readFile(auditLogFile, "utf-8");
+    const content = await readDataText(auditLogFile);
 
     return content
       .trim()
@@ -53,19 +57,19 @@ export async function readAuditLog(limit = 100) {
 
 async function trimAuditLogIfNeeded(nextEntryBytes: number) {
   try {
-    const fileStat = await stat(auditLogFile);
+    const size = await getDataTextSize(auditLogFile);
 
-    if (fileStat.size + nextEntryBytes <= maxAuditLogBytes) {
+    if (size + nextEntryBytes <= maxAuditLogBytes) {
       return;
     }
 
-    const content = await readFile(auditLogFile);
+    const content = Buffer.from(await readDataText(auditLogFile));
     const trimmed = content.subarray(Math.max(0, content.length - targetTrimBytes));
     const firstNewline = trimmed.indexOf(10);
     const safeTrimmed =
       firstNewline === -1 ? trimmed : trimmed.subarray(firstNewline + 1);
 
-    await writeFile(auditLogFile, safeTrimmed);
+    await writeDataText(auditLogFile, safeTrimmed.toString("utf8"));
   } catch {
     return;
   }

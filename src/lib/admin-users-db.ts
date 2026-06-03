@@ -1,15 +1,16 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   hashPassword,
   listAdminUsernames,
   normalizeUsername,
   type StoredAdminUser,
 } from "@/lib/auth";
+import {
+  ensureDataStorage,
+  readDataText,
+  writeDataText,
+} from "@/lib/runtime-storage";
 
-const dataDir = path.join(process.cwd(), "data");
-const usersFile = path.join(dataDir, "admin-users.json");
-const temporaryUsersFile = path.join(dataDir, "admin-users.json.tmp");
+const usersFile = "admin-users.json";
 
 let usersQueue = Promise.resolve();
 
@@ -69,10 +70,10 @@ export async function upsertAdminUserPassword(input: {
 }
 
 async function readStoredUsers() {
-  await ensureDataDirectory();
+  await ensureDataStorage();
 
   try {
-    const content = await readFile(usersFile, "utf8");
+    const content = await readDataText(usersFile);
     const parsed = JSON.parse(content) as StoredAdminUser[];
 
     return Array.isArray(parsed)
@@ -88,13 +89,8 @@ async function readStoredUsers() {
 }
 
 async function writeStoredUsers(users: StoredAdminUser[]) {
-  await ensureDataDirectory();
-  await writeFile(temporaryUsersFile, JSON.stringify(users, null, 2));
-  await rename(temporaryUsersFile, usersFile);
-}
-
-async function ensureDataDirectory() {
-  await mkdir(dataDir, { recursive: true });
+  await ensureDataStorage();
+  await writeDataText(usersFile, JSON.stringify(users, null, 2));
 }
 
 function withUsersLock<T>(operation: () => Promise<T>) {

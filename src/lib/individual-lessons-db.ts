@@ -1,5 +1,8 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
+import {
+  ensureDataStorage,
+  readDataText,
+  writeDataText,
+} from "@/lib/runtime-storage";
 
 export type ImportedIndividualLesson = {
   dateOrDay: string;
@@ -9,9 +12,7 @@ export type ImportedIndividualLesson = {
   trainer: string;
 };
 
-const dataDir = path.join(process.cwd(), "data");
-const lessonsFile = path.join(dataDir, "individual-lessons.json");
-const temporaryLessonsFile = path.join(dataDir, "individual-lessons.json.tmp");
+const lessonsFile = "individual-lessons.json";
 
 let lessonsQueue = Promise.resolve();
 
@@ -34,10 +35,10 @@ export async function replaceImportedIndividualLessons(
 }
 
 async function readImportedLessons() {
-  await ensureDataDirectory();
+  await ensureDataStorage();
 
   try {
-    const content = await readFile(lessonsFile, "utf8");
+    const content = await readDataText(lessonsFile);
     const parsed = JSON.parse(content) as ImportedIndividualLesson[];
 
     return Array.isArray(parsed)
@@ -55,9 +56,8 @@ async function readImportedLessons() {
 }
 
 async function writeImportedLessons(lessons: ImportedIndividualLesson[]) {
-  await ensureDataDirectory();
-  await writeFile(temporaryLessonsFile, JSON.stringify(lessons, null, 2));
-  await rename(temporaryLessonsFile, lessonsFile);
+  await ensureDataStorage();
+  await writeDataText(lessonsFile, JSON.stringify(lessons, null, 2));
 }
 
 function normalizeImportedLesson(
@@ -74,10 +74,6 @@ function normalizeImportedLesson(
   }
 
   return { dateOrDay, end, name, start, trainer };
-}
-
-async function ensureDataDirectory() {
-  await mkdir(dataDir, { recursive: true });
 }
 
 function withLessonsLock<T>(operation: () => Promise<T>) {

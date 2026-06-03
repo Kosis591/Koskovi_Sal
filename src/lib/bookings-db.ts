@@ -1,34 +1,18 @@
-import { readFileSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   bookings as seedBookings,
   type Booking,
 } from "@/lib/schedule";
+import {
+  readDataText,
+  readDataTextSync,
+  writeDataText,
+} from "@/lib/runtime-storage";
 
-const dataDir = path.join(process.cwd(), "data");
-const bookingsFile = path.join(dataDir, "bookings.json");
-const recurringCancellationsFile = path.join(dataDir, "recurring-cancellations.json");
-const recurringOverridesFile = path.join(dataDir, "recurring-overrides.json");
-const recurringTrainersFile = path.join(dataDir, "recurring-trainers.json");
-const recurringHolidaysFile = path.join(dataDir, "recurring-holidays.json");
-const temporaryBookingsFile = path.join(dataDir, "bookings.json.tmp");
-const temporaryRecurringCancellationsFile = path.join(
-  dataDir,
-  "recurring-cancellations.json.tmp",
-);
-const temporaryRecurringOverridesFile = path.join(
-  dataDir,
-  "recurring-overrides.json.tmp",
-);
-const temporaryRecurringTrainersFile = path.join(
-  dataDir,
-  "recurring-trainers.json.tmp",
-);
-const temporaryRecurringHolidaysFile = path.join(
-  dataDir,
-  "recurring-holidays.json.tmp",
-);
+const bookingsFile = "bookings.json";
+const recurringCancellationsFile = "recurring-cancellations.json";
+const recurringOverridesFile = "recurring-overrides.json";
+const recurringTrainersFile = "recurring-trainers.json";
+const recurringHolidaysFile = "recurring-holidays.json";
 const recurringHorizonDays = 28;
 const latBaseWeekMonday = "2026-05-18";
 let databaseQueue = Promise.resolve();
@@ -400,7 +384,7 @@ export async function markBookingCleaned(id: string) {
 async function readBookings() {
   await ensureDatabase();
 
-  const content = await readFile(bookingsFile, "utf-8");
+  const content = await readDataText(bookingsFile);
   const bookings = normalizeBookings(JSON.parse(content) as Booking[]);
 
   if (content !== serializeBookings(bookings)) {
@@ -411,14 +395,12 @@ async function readBookings() {
 }
 
 async function writeBookings(bookings: Booking[]) {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(temporaryBookingsFile, serializeBookings(bookings), "utf-8");
-  await rename(temporaryBookingsFile, bookingsFile);
+  await writeDataText(bookingsFile, serializeBookings(bookings));
 }
 
 async function ensureDatabase() {
   try {
-    await readFile(bookingsFile, "utf-8");
+    await readDataText(bookingsFile);
   } catch {
     await writeBookings(seedBookings);
   }
@@ -629,7 +611,7 @@ function pushRecurringBooking(
 async function readRecurringCancellations() {
   try {
     return JSON.parse(
-      await readFile(recurringCancellationsFile, "utf-8"),
+      await readDataText(recurringCancellationsFile),
     ) as string[];
   } catch {
     return [];
@@ -640,7 +622,7 @@ function getRecurringCancellationsSync() {
   try {
     return new Set(
       JSON.parse(
-        readFileSync(recurringCancellationsFile, "utf-8"),
+        readDataTextSync(recurringCancellationsFile),
       ) as string[],
     );
   } catch {
@@ -708,7 +690,7 @@ async function updateRecurringOverride(
 async function readRecurringOverrides() {
   try {
     return normalizeRecurringOverrides(
-      JSON.parse(await readFile(recurringOverridesFile, "utf-8")) as RecurringBookingOverrides,
+      JSON.parse(await readDataText(recurringOverridesFile)) as RecurringBookingOverrides,
     );
   } catch {
     return {};
@@ -718,7 +700,7 @@ async function readRecurringOverrides() {
 function getRecurringOverridesSync() {
   try {
     return normalizeRecurringOverrides(
-      JSON.parse(readFileSync(recurringOverridesFile, "utf-8")) as RecurringBookingOverrides,
+      JSON.parse(readDataTextSync(recurringOverridesFile)) as RecurringBookingOverrides,
     );
   } catch {
     return {};
@@ -726,13 +708,10 @@ function getRecurringOverridesSync() {
 }
 
 async function writeRecurringOverrides(overrides: RecurringBookingOverrides) {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(
-    temporaryRecurringOverridesFile,
+  await writeDataText(
+    recurringOverridesFile,
     `${JSON.stringify(normalizeRecurringOverrides(overrides), null, 2)}\n`,
-    "utf-8",
   );
-  await rename(temporaryRecurringOverridesFile, recurringOverridesFile);
 }
 
 function normalizeRecurringOverrides(overrides: RecurringBookingOverrides) {
@@ -768,7 +747,7 @@ function normalizeRecurringOverrides(overrides: RecurringBookingOverrides) {
 async function readRecurringHolidays() {
   try {
     return normalizeRecurringHolidays(
-      JSON.parse(await readFile(recurringHolidaysFile, "utf-8")) as RecurringHoliday[],
+      JSON.parse(await readDataText(recurringHolidaysFile)) as RecurringHoliday[],
     );
   } catch {
     return [];
@@ -778,7 +757,7 @@ async function readRecurringHolidays() {
 function getRecurringHolidaysSync() {
   try {
     return normalizeRecurringHolidays(
-      JSON.parse(readFileSync(recurringHolidaysFile, "utf-8")) as RecurringHoliday[],
+      JSON.parse(readDataTextSync(recurringHolidaysFile)) as RecurringHoliday[],
     );
   } catch {
     return [];
@@ -786,13 +765,10 @@ function getRecurringHolidaysSync() {
 }
 
 async function writeRecurringHolidays(holidays: RecurringHoliday[]) {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(
-    temporaryRecurringHolidaysFile,
+  await writeDataText(
+    recurringHolidaysFile,
     `${JSON.stringify(normalizeRecurringHolidays(holidays), null, 2)}\n`,
-    "utf-8",
   );
-  await rename(temporaryRecurringHolidaysFile, recurringHolidaysFile);
 }
 
 function normalizeRecurringHolidays(holidays: RecurringHoliday[]) {
@@ -829,22 +805,16 @@ function isDateKey(value: unknown): value is string {
 }
 
 async function writeRecurringCancellations(ids: string[]) {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(
-    temporaryRecurringCancellationsFile,
-    `${JSON.stringify([...new Set(ids)].sort(), null, 2)}\n`,
-    "utf-8",
-  );
-  await rename(
-    temporaryRecurringCancellationsFile,
+  await writeDataText(
     recurringCancellationsFile,
+    `${JSON.stringify([...new Set(ids)].sort(), null, 2)}\n`,
   );
 }
 
 async function readRecurringTrainers() {
   try {
     return normalizeRecurringTrainers(
-      JSON.parse(await readFile(recurringTrainersFile, "utf-8")) as RecurringTrainerConfig,
+      JSON.parse(await readDataText(recurringTrainersFile)) as RecurringTrainerConfig,
     );
   } catch {
     return {};
@@ -854,7 +824,7 @@ async function readRecurringTrainers() {
 function getRecurringTrainersSync() {
   try {
     return normalizeRecurringTrainers(
-      JSON.parse(readFileSync(recurringTrainersFile, "utf-8")) as RecurringTrainerConfig,
+      JSON.parse(readDataTextSync(recurringTrainersFile)) as RecurringTrainerConfig,
     );
   } catch {
     return {};
@@ -862,13 +832,10 @@ function getRecurringTrainersSync() {
 }
 
 async function writeRecurringTrainers(config: RecurringTrainerConfig) {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(
-    temporaryRecurringTrainersFile,
+  await writeDataText(
+    recurringTrainersFile,
     `${JSON.stringify(normalizeRecurringTrainers(config), null, 2)}\n`,
-    "utf-8",
   );
-  await rename(temporaryRecurringTrainersFile, recurringTrainersFile);
 }
 
 function normalizeRecurringTrainers(config: RecurringTrainerConfig) {

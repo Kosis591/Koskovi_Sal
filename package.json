@@ -7,10 +7,12 @@
     "dev": "node scripts/clean-next.mjs && next dev",
     "build": "node scripts/clean-next.mjs && next build",
     "hash-password": "node scripts/hash-password.mjs",
+    "migrate:sqlite": "node scripts/migrate-sqlite.mjs",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "better-sqlite3": "^12.5.0",
     "lucide-react": "^1.16.0",
     "next": "^15.0.0",
     "react": "19.2.4",

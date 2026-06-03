@@ -1,7 +1,6 @@
 import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { readDataTextSync } from "@/lib/runtime-storage";
 
 export const adminSessionCookie = "koskovi_admin_session";
 
@@ -23,7 +22,7 @@ export type StoredAdminUser = {
   username: string;
 };
 
-const adminUsersFile = path.join(process.cwd(), "data", "admin-users.json");
+const adminUsersFile = "admin-users.json";
 
 function getAdminCredentials(): AdminCredential[] {
   const credentials = [
@@ -202,7 +201,7 @@ export function normalizeUsername(username: string) {
 
 function readStoredAdminUsersSync() {
   try {
-    const content = readFileSync(adminUsersFile, "utf8");
+    const content = readDataTextSync(adminUsersFile);
     const parsed = JSON.parse(content) as StoredAdminUser[];
 
     return Array.isArray(parsed)
