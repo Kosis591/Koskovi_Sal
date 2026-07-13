@@ -13,10 +13,16 @@ type AdminCredential = {
   username: string;
 };
 
+export type LessonFilter = {
+  type: "all" | "dancer" | "trainer";
+  value: string;
+};
+
 export type StoredAdminUser = {
   createdAt?: string;
   createdBy?: string;
-  passwordHash: string;
+  lessonFilter?: LessonFilter;
+  passwordHash?: string;
   updatedAt?: string;
   updatedBy?: string;
   username: string;
@@ -59,10 +65,12 @@ function getAdminCredentials(): AdminCredential[] {
   }
 
   for (const user of readStoredAdminUsersSync()) {
-    mergedCredentials.set(normalizeUsername(user.username), {
-      username: user.username,
-      passwordHash: user.passwordHash,
-    });
+    if (user.passwordHash) {
+      mergedCredentials.set(normalizeUsername(user.username), {
+        username: user.username,
+        passwordHash: user.passwordHash,
+      });
+    }
   }
 
   return [...mergedCredentials.values()];
@@ -138,6 +146,19 @@ export function listAdminUsernames() {
   return getAdminCredentials().map((credential) => credential.username);
 }
 
+export function getAdminUserLessonFilter(username: string | null | undefined) {
+  if (!username) {
+    return { type: "all", value: "" } satisfies LessonFilter;
+  }
+
+  const normalizedUsername = normalizeUsername(username);
+  const storedUser = readStoredAdminUsersSync().find(
+    (user) => normalizeUsername(user.username) === normalizedUsername,
+  );
+
+  return sanitizeLessonFilter(storedUser?.lessonFilter);
+}
+
 export function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const key = scryptSync(password, salt, 64).toString("hex");
@@ -199,13 +220,28 @@ export function normalizeUsername(username: string) {
   return username.trim().toLocaleLowerCase("cs-CZ");
 }
 
+export function sanitizeLessonFilter(filter?: Partial<LessonFilter> | null) {
+  const type = filter?.type;
+  const value = filter?.value?.trim() ?? "";
+
+  if (type !== "dancer" && type !== "trainer") {
+    return { type: "all", value: "" } satisfies LessonFilter;
+  }
+
+  if (!value) {
+    return { type: "all", value: "" } satisfies LessonFilter;
+  }
+
+  return { type, value } satisfies LessonFilter;
+}
+
 function readStoredAdminUsersSync() {
   try {
     const content = readDataTextSync(adminUsersFile);
     const parsed = JSON.parse(content) as StoredAdminUser[];
 
     return Array.isArray(parsed)
-      ? parsed.filter((user) => user.username && user.passwordHash)
+      ? parsed.filter((user) => user.username)
       : [];
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

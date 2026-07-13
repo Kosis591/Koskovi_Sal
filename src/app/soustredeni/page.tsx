@@ -14,7 +14,7 @@ import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function SoustredeniPage() {
   const cookieStore = await cookies();
   const username = getAdminRequestUsername(cookieStore);
   const [
@@ -29,6 +29,7 @@ export default async function Home() {
 
   return (
     <BookingDashboard
+      initialAppMode="lessons"
       initialBookings={initialBookings}
       initialDate={formatDateKey(new Date())}
       initialRecurringCancellations={initialRecurringCancellations}

@@ -105,15 +105,21 @@ const weekControlFormatter = new Intl.DateTimeFormat("cs-CZ", {
 type BookingDashboardProps = {
   initialBookings: Booking[];
   initialDate: string;
+  initialAppMode?: AppMode;
   initialRecurringCancellations: RecurringCancellationNotice[];
   initialRecurringOverrides: RecurringOverrideNotice[];
   initialSession: {
     authenticated: boolean;
+    lessonFilter?: LessonFilter;
     username: string | null;
   };
 };
 
 type AppMode = "hall" | "lessons";
+type LessonFilter = {
+  type: "all" | "dancer" | "trainer";
+  value: string;
+};
 type ImportedLesson = {
   dateOrDay: string;
   end: string;
@@ -125,6 +131,7 @@ type ImportedLesson = {
 export function BookingDashboard({
   initialBookings,
   initialDate,
+  initialAppMode = "hall",
   initialRecurringCancellations,
   initialRecurringOverrides,
   initialSession,
@@ -139,6 +146,9 @@ export function BookingDashboard({
   });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [sessionLessonFilter, setSessionLessonFilter] = useState<LessonFilter>(
+    initialSession.lessonFilter ?? { type: "all", value: "" },
+  );
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -149,7 +159,7 @@ export function BookingDashboard({
     initialSession.authenticated,
   );
   const [sessionUsername, setSessionUsername] = useState(initialSession.username);
-  const [appMode, setAppMode] = useState<AppMode>("hall");
+  const [appMode, setAppMode] = useState<AppMode>(initialAppMode);
   const [selectedLessonTrainer, setSelectedLessonTrainer] = useState("");
   const isCheckingSession = false;
   const [authError, setAuthError] = useState("");
@@ -173,6 +183,12 @@ export function BookingDashboard({
   const [timeMessage, setTimeMessage] = useState("");
   const [titleMessage, setTitleMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [campDayFilter, setCampDayFilter] = useState("");
+  const [campDancerFilter, setCampDancerFilter] = useState("");
+  const [campTrainerFilter, setCampTrainerFilter] = useState("");
+  const [googleSheetUrl, setGoogleSheetUrl] = useState(
+    "https://docs.google.com/spreadsheets/d/1pMIE6aTjBSNSNyUXEm7H7R54UDtDCTfcoduMONJ5HYI/htmlview#gid=1557613453",
+  );
   const [pastedLessonTable, setPastedLessonTable] = useState("");
   const [storedImportedLessons, setStoredImportedLessons] = useState<
     ImportedLesson[]
@@ -195,18 +211,17 @@ export function BookingDashboard({
 
   const normalizedSessionUsername = (sessionUsername ?? "").toLocaleLowerCase("cs-CZ");
   const isLessonReadOnlyAccount = normalizedSessionUsername === "tkkoskovi";
-  const canUseLessonMode =
-    isAuthenticated &&
-    ["kosis", "tkkoskovi"].includes(normalizedSessionUsername);
+  const isDedicatedLessonPage = initialAppMode === "lessons";
+  const canUseLessonMode = isAuthenticated || isDedicatedLessonPage;
   const activeAppMode: AppMode = canUseLessonMode ? appMode : "hall";
   const canManageBookings = isAuthenticated && !isLessonReadOnlyAccount;
   const canSaveImportedLessons = normalizedSessionUsername === "kosis";
   const shouldShowBookingPanel =
     (!isAuthenticated || canManageBookings) &&
-    (activeAppMode === "lessons" || isBookingFormOpen);
+    isBookingFormOpen;
   const isExpandedBookingLayout =
     canManageBookings &&
-    (activeAppMode === "lessons" || isBookingFormOpen);
+    isBookingFormOpen;
   const activeSlotMinutes =
     activeAppMode === "lessons" ? 45 : hallSettings.slotMinutes;
   const currentDateKey = now ? formatDateKey(now) : "";
@@ -283,6 +298,72 @@ export function BookingDashboard({
     pastedLessonTable && importedLessons.length > 0
       ? importedLessons
       : storedImportedLessons;
+  const campDays = useMemo(
+    () => [...new Set(displayedImportedLessons.map((lesson) => lesson.dateOrDay))],
+    [displayedImportedLessons],
+  );
+  const campTrainers = useMemo(
+    () =>
+      [...new Set(displayedImportedLessons.map((lesson) => lesson.trainer))].sort(
+        (left, right) => left.localeCompare(right, "cs-CZ"),
+      ),
+    [displayedImportedLessons],
+  );
+  const filteredImportedLessons = useMemo(() => {
+    const dancerQuery = normalizeSearch(campDancerFilter);
+    const enforcedQuery =
+      sessionLessonFilter.type === "all"
+        ? ""
+        : normalizeSearch(sessionLessonFilter.value);
+
+    return displayedImportedLessons.filter((lesson) => {
+      if (sessionLessonFilter.type === "trainer") {
+        if (!normalizeSearch(lesson.trainer).includes(enforcedQuery)) {
+          return false;
+        }
+      }
+
+      if (sessionLessonFilter.type === "dancer") {
+        if (!normalizeSearch(lesson.name).includes(enforcedQuery)) {
+          return false;
+        }
+      }
+
+      if (campDayFilter && lesson.dateOrDay !== campDayFilter) {
+        return false;
+      }
+
+      if (campTrainerFilter && lesson.trainer !== campTrainerFilter) {
+        return false;
+      }
+
+      if (dancerQuery && !normalizeSearch(lesson.name).includes(dancerQuery)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    campDancerFilter,
+    campDayFilter,
+    campTrainerFilter,
+    displayedImportedLessons,
+    sessionLessonFilter,
+  ]);
+  const groupedImportedLessons = useMemo(() => {
+    const groups = new Map<string, ImportedLesson[]>();
+
+    for (const lesson of filteredImportedLessons) {
+      const currentLessons = groups.get(lesson.dateOrDay) ?? [];
+      currentLessons.push(lesson);
+      groups.set(lesson.dateOrDay, currentLessons);
+    }
+
+    return [...groups.entries()].map(([dateOrDay, lessons]) => ({
+      dateOrDay,
+      lessons,
+    }));
+  }, [filteredImportedLessons]);
   const visibleDateKeys = useMemo(() => {
     const keys = new Set<string>([todayDateKey]);
 
@@ -508,7 +589,7 @@ export function BookingDashboard({
   }, [syncCalendar]);
 
   useEffect(() => {
-    if (canUseLessonMode) {
+    if (isAuthenticated) {
       const timeout = window.setTimeout(() => {
         void loadImportedLessons();
       }, 0);
@@ -517,7 +598,7 @@ export function BookingDashboard({
     }
 
     return undefined;
-  }, [canUseLessonMode, loadImportedLessons]);
+  }, [isAuthenticated, loadImportedLessons]);
 
   function updateRequest(field: keyof BookingRequest, value: string) {
     setSubmitMessage("");
@@ -664,6 +745,7 @@ export function BookingDashboard({
     try {
       await loginAdmin(username, password);
       const session = await getAdminSession();
+      setSessionLessonFilter(session.lessonFilter ?? { type: "all", value: "" });
       setSessionUsername(session.username ?? submittedUsername);
     } catch (error) {
       setAuthError(
@@ -681,6 +763,7 @@ export function BookingDashboard({
     await logoutAdmin();
     setIsAuthenticated(false);
     setSessionUsername(null);
+    setSessionLessonFilter({ type: "all", value: "" });
     setSubmitMessage("");
   }
 
@@ -985,6 +1068,34 @@ export function BookingDashboard({
     }
   }
 
+  async function handleImportGoogleLessons() {
+    setImportMessage("");
+    setIsSavingImport(true);
+
+    try {
+      const response = await fetch("/api/individual-lessons/import-google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: googleSheetUrl }),
+      });
+      const data = (await response.json()) as {
+        lessons?: ImportedLesson[];
+        message?: string;
+      };
+
+      if (!response.ok) {
+        setImportMessage(data.message ?? "Import z Google tabulky se nepodařil.");
+        return;
+      }
+
+      setStoredImportedLessons(data.lessons ?? []);
+      setPastedLessonTable("");
+      setImportMessage(data.message ?? "Rozpis soustředění je naimportovaný.");
+    } finally {
+      setIsSavingImport(false);
+    }
+  }
+
   return (
     <SiteShell
       maxWidthClassName="max-w-[1840px]"
@@ -1030,6 +1141,7 @@ export function BookingDashboard({
               }`}
               onClick={() => {
                 setAppMode("lessons");
+                setIsBookingFormOpen(false);
                 setViewMode("week");
                 setRequest((current) => ({
                   ...current,
@@ -1042,7 +1154,7 @@ export function BookingDashboard({
               type="button"
             >
               <User size={15} />
-              Individuální lekce
+              Soustředění
             </button>
           ) : (
             <span className="inline-flex items-center gap-2">
@@ -1089,7 +1201,7 @@ export function BookingDashboard({
       ]}
       title={
         activeAppMode === "lessons"
-          ? "Dostupnost individuálních lekcí"
+          ? "Soustředění"
           : "Dostupnost tanečního sálu"
       }
     >
@@ -1098,7 +1210,7 @@ export function BookingDashboard({
             <div>
               <h2 className="text-xl font-semibold">
                 {activeAppMode === "lessons"
-                  ? "Individuální lekce"
+                  ? "Soustředění"
                   : viewMode === "today"
                   ? `Denní dostupnost - ${dayFormatter.format(selectedDateObject)}`
                   : viewMode === "week"
@@ -1426,36 +1538,115 @@ export function BookingDashboard({
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase text-[#66706f]">
-                    Individuální lekce
+                    Soustředění
                   </p>
                   <h3 className="mt-1 text-xl font-semibold">
-                    Rozpis ze soustředění
+                    Rozpis lekcí ze soustředění
                   </h3>
                 </div>
                 <span className="rounded-full bg-[#e7f1f6] px-3 py-1 text-xs font-semibold text-[#003758]">
-                  {formatEventCount(displayedImportedLessons.length)}
+                  {formatEventCount(filteredImportedLessons.length)}
                 </span>
               </div>
 
-              {canSaveImportedLessons ? (
+              {!isAuthenticated ? (
+                <div className="mt-4 rounded-md border border-[#ded6c9] bg-[#fcfaf6] p-4">
+                  <h4 className="text-lg font-semibold">Přihlášení k soustředění</h4>
+                  <p className="mt-1 text-sm leading-6 text-[#66706f]">
+                    Rozpis lekcí je dostupný po přihlášení. Po přihlášení se
+                    automaticky zobrazí jen lekce povolené pro tvůj účet.
+                  </p>
+                  <form className="mt-4 grid gap-3 sm:max-w-md" onSubmit={handleLogin}>
+                    <label className="field-label">
+                      Jméno uživatele
+                      <input
+                        className="field-input mt-1"
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder="Jméno uživatele"
+                        ref={loginUsernameInputRef}
+                        required
+                        value={username}
+                      />
+                    </label>
+                    <label className="field-label">
+                      Heslo
+                      <input
+                        className="field-input mt-1"
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="Zadej heslo"
+                        required
+                        type="password"
+                        value={password}
+                      />
+                    </label>
+                    {authError ? (
+                      <div className="flex items-start gap-2 rounded-md border border-[#edd3cc] bg-[#fff0eb] p-3 text-sm text-[#8c2f20]">
+                        <AlertCircle size={17} />
+                        {authError}
+                      </div>
+                    ) : null}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76]"
+                        type="submit"
+                      >
+                        <LogIn size={17} />
+                        Přihlásit
+                      </button>
+                      <Link
+                        className="inline-flex h-11 items-center justify-center rounded-md border border-[#ded6c9] px-4 text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8]"
+                        href="/"
+                      >
+                        Zpět na kalendář
+                      </Link>
+                    </div>
+                  </form>
+                </div>
+              ) : (
                 <>
+              {sessionLessonFilter.type !== "all" ? (
+                <p className="mt-3 rounded-md border border-[#d8eadf] bg-[#f3fbf5] px-3 py-2 text-sm text-[#245d3f]">
+                  Zobrazení je omezené filtrem účtu:{" "}
+                  {sessionLessonFilter.type === "trainer" ? "trenér" : "tanečník"}{" "}
+                  <strong>{sessionLessonFilter.value}</strong>.
+                </p>
+              ) : null}
+
+              {canSaveImportedLessons ? (
+                <div className="mt-4 grid gap-3 rounded-md border border-[#ded6c9] bg-[#fcfaf6] p-3">
+                  <label className="field-label">
+                    Google tabulka
+                    <input
+                      className="field-input mt-1"
+                      onChange={(event) => setGoogleSheetUrl(event.target.value)}
+                      value={googleSheetUrl}
+                    />
+                  </label>
+                  <button
+                    className="inline-flex h-10 items-center justify-center rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!googleSheetUrl.trim() || isSavingImport}
+                    onClick={handleImportGoogleLessons}
+                    type="button"
+                  >
+                    {isSavingImport ? "Importuji..." : "Importovat z Google tabulky"}
+                  </button>
                   <textarea
-                    className="field-input mt-4 min-h-28 w-full resize-y"
+                    className="field-input min-h-28 w-full resize-y"
                     onChange={(event) => setPastedLessonTable(event.target.value)}
                     placeholder={
                       "Zkopíruj oblast z Excelu a vlož ji sem.\nIdeálně sloupce: Datum/den, Čas, Trenér, Pár"
                     }
-                    value={pastedLessonTable}
+                      value={pastedLessonTable}
                   />
                   <button
-                    className="mt-3 inline-flex h-10 items-center justify-center rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-10 items-center justify-center rounded-md border border-[#003758] px-4 text-sm font-semibold text-[#003758] transition hover:bg-[#eef7fb] disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={importedLessons.length === 0 || isSavingImport}
                     onClick={handleSaveImportedLessons}
                     type="button"
                   >
                     {isSavingImport ? "Ukládám..." : "Uložit rozpis z Excelu"}
                   </button>
-                </>
+                </div>
               ) : null}
 
               {importMessage ? (
@@ -1465,14 +1656,95 @@ export function BookingDashboard({
               ) : null}
 
               {displayedImportedLessons.length > 0 ? (
-                  <div className="mt-4 overflow-hidden rounded-md border border-[#ded6c9]">
+                <>
+                  <div className="mt-4 grid gap-3 rounded-md border border-[#ded6c9] bg-[#fcfaf6] p-3 md:grid-cols-3">
+                    <label className="field-label">
+                      Den soustředění
+                      <select
+                        className="field-input mt-1"
+                        onChange={(event) => setCampDayFilter(event.target.value)}
+                        value={campDayFilter}
+                      >
+                        <option value="">Všechny dny</option>
+                        {campDays.map((day) => (
+                          <option key={day} value={day}>
+                            {day}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field-label">
+                      Trenér
+                      <select
+                        className="field-input mt-1"
+                        onChange={(event) => setCampTrainerFilter(event.target.value)}
+                        value={campTrainerFilter}
+                      >
+                        <option value="">Všichni trenéři</option>
+                        {campTrainers.map((trainer) => (
+                          <option key={trainer} value={trainer}>
+                            {trainer}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field-label">
+                      Tanečník / pár
+                      <input
+                        className="field-input mt-1"
+                        onChange={(event) => setCampDancerFilter(event.target.value)}
+                        placeholder="Hledat jméno"
+                        value={campDancerFilter}
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:hidden">
+                    {groupedImportedLessons.map((group) => (
+                      <article
+                        className="overflow-hidden rounded-md border border-[#ded6c9] bg-[#fcfaf6]"
+                        key={group.dateOrDay}
+                      >
+                        <div className="bg-[#003758] px-4 py-3 text-white">
+                          <p className="text-xs font-semibold uppercase tracking-normal text-white/75">
+                            Den soustředění
+                          </p>
+                          <h4 className="mt-1 text-lg font-semibold">
+                            {group.dateOrDay}
+                          </h4>
+                        </div>
+                        <div className="divide-y divide-[#ece3d5]">
+                          {group.lessons.map((lesson, index) => (
+                            <div
+                              className="grid gap-2 px-4 py-3"
+                              key={`${lesson.dateOrDay}-${lesson.start}-${lesson.trainer}-${lesson.name}-${index}`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate text-base font-semibold text-[#132935]">
+                                    {lesson.name}
+                                  </p>
+                                  <p className="mt-1 text-sm text-[#66706f]">
+                                    {lesson.trainer}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 rounded-full bg-[#e7f1f6] px-3 py-1 text-sm font-semibold text-[#003758]">
+                                  {lesson.start}-{lesson.end}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="mt-4 hidden overflow-hidden rounded-md border border-[#ded6c9] md:block">
                     <div className="grid grid-cols-[1fr_96px_1fr_1.2fr] bg-[#003758] text-xs font-semibold uppercase text-white">
                       <div className="px-3 py-2">Den</div>
                       <div className="px-3 py-2">Čas</div>
                       <div className="px-3 py-2">Trenér</div>
                       <div className="px-3 py-2">Pár</div>
                     </div>
-                    {displayedImportedLessons.map((lesson, index) => (
+                    {filteredImportedLessons.map((lesson, index) => (
                       <div
                         className="grid grid-cols-[1fr_96px_1fr_1.2fr] border-t border-[#ece3d5] text-sm"
                         key={`${lesson.dateOrDay}-${lesson.start}-${lesson.trainer}-${index}`}
@@ -1492,15 +1764,23 @@ export function BookingDashboard({
                       </div>
                     ))}
                   </div>
+                  {filteredImportedLessons.length === 0 ? (
+                    <p className="mt-3 rounded-md border border-[#edd3cc] bg-[#fff0eb] px-3 py-2 text-sm text-[#8c2f20]">
+                      Pro zadaný filtr není žádná lekce.
+                    </p>
+                  ) : null}
+                </>
                 ) : pastedLessonTable ? (
                   <p className="mt-3 rounded-md border border-[#edd3cc] bg-[#fff0eb] px-3 py-2 text-sm text-[#8c2f20]">
                     Z vložené tabulky se zatím nepodařilo rozpoznat žádné lekce.
                   </p>
                 ) : (
                   <p className="mt-4 rounded-md border border-[#d8eadf] bg-[#f3fbf5] p-4 text-sm text-[#246043]">
-                    Zatím není uložený žádný rozpis individuálních lekcí.
+                    Zatím není uložený žádný rozpis soustředění.
                   </p>
                 )}
+                </>
+              )}
             </section>
           ) : null}
 
@@ -3035,6 +3315,10 @@ function normalizeTableHeader(value: string) {
     .toLocaleLowerCase("cs-CZ")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function normalizeSearch(value: string) {
+  return normalizeTableHeader(value);
 }
 
 function addMinutesToTime(time: string, minutesToAdd: number) {

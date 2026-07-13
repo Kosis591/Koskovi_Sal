@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
   if (isReadOnlyLessonUsername(actor)) {
     return NextResponse.json(
-      { message: "Tento účet má individuální lekce pouze pro čtení." },
+      { message: "Tento účet má soustředění pouze pro čtení." },
       { status: 403 },
     );
   }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   if (payload.bookingKind === "individual-lesson" && !payload.trainer) {
     return NextResponse.json(
-      { message: "Pro individuální lekci vyber trenéra." },
+      { message: "Pro soustředění vyber trenéra." },
       { status: 400 },
     );
   }

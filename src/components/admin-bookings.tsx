@@ -444,13 +444,13 @@ export function AdminBookings() {
         <section className="rounded-lg border border-[#ded6c9] bg-white p-5 lg:col-span-2 lg:max-w-xl">
           <h2 className="text-xl font-semibold">Správa není dostupná</h2>
           <p className="mt-2 text-sm leading-6 text-[#66706f]">
-            Účet TKKoskovi slouží pouze k nahlížení do individuálních lekcí.
+            Účet TKKoskovi slouží pouze k nahlížení do soustředění.
           </p>
           <Link
             className="mt-5 inline-flex h-11 items-center justify-center rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76]"
-            href="/"
+            href="/soustredeni"
           >
-            Zpět na individuální lekce
+            Zpět na soustředění
           </Link>
         </section>
       ) : (

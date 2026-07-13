@@ -1,5 +1,9 @@
 export type AdminSession = {
   authenticated: boolean;
+  lessonFilter?: {
+    type: "all" | "dancer" | "trainer";
+    value: string;
+  };
   username?: string | null;
 };
 

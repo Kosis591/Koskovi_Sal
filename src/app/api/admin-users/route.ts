@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminRequestUsername } from "@/lib/auth";
-import { getAdminUsers, upsertAdminUserPassword } from "@/lib/admin-users-db";
+import { getAdminRequestUsername, sanitizeLessonFilter } from "@/lib/auth";
+import {
+  getAdminUsers,
+  upsertAdminUserLessonFilter,
+  upsertAdminUserPassword,
+} from "@/lib/admin-users-db";
 
 export const dynamic = "force-dynamic";
 
@@ -26,23 +30,59 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = (await request.json()) as {
+    lessonFilter?: {
+      type?: "all" | "dancer" | "trainer";
+      value?: string;
+    };
     password?: string;
     username?: string;
   };
   const username = payload.username?.trim();
 
-  if (!username || !payload.password || payload.password.length < 8) {
+  if (!username) {
     return NextResponse.json(
-      { message: "Zadej uživatele a heslo alespoň 8 znaků." },
+      { message: "Zadej uživatele." },
       { status: 400 },
     );
   }
 
-  const user = await upsertAdminUserPassword({
-    actor,
-    password: payload.password,
-    username,
-  });
+  if (payload.password !== undefined) {
+    if (payload.password.length < 8) {
+      return NextResponse.json(
+        { message: "Heslo musí mít alespoň 8 znaků." },
+        { status: 400 },
+      );
+    }
 
-  return NextResponse.json({ message: "Uživatel je uložený.", user });
+    const user = await upsertAdminUserPassword({
+      actor,
+      password: payload.password,
+      username,
+    });
+
+    if (payload.lessonFilter) {
+      await upsertAdminUserLessonFilter({
+        actor,
+        lessonFilter: sanitizeLessonFilter(payload.lessonFilter),
+        username,
+      });
+    }
+
+    return NextResponse.json({ message: "Uživatel je uložený.", user });
+  }
+
+  try {
+    const user = await upsertAdminUserLessonFilter({
+      actor,
+      lessonFilter: sanitizeLessonFilter(payload.lessonFilter),
+      username,
+    });
+
+    return NextResponse.json({ message: "Filtr soustředění je uložený.", user });
+  } catch {
+    return NextResponse.json(
+      { message: "Nejdřív uživateli nastav heslo, aby šel filtr uložit." },
+      { status: 400 },
+    );
+  }
 }

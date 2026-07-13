@@ -2,6 +2,8 @@ import {
   hashPassword,
   listAdminUsernames,
   normalizeUsername,
+  sanitizeLessonFilter,
+  type LessonFilter,
   type StoredAdminUser,
 } from "@/lib/auth";
 import {
@@ -19,13 +21,18 @@ export async function getAdminUsers() {
   const storedByUsername = new Map(
     storedUsers.map((user) => [normalizeUsername(user.username), user]),
   );
+  const usernames = new Set([
+    ...listAdminUsernames(),
+    ...storedUsers.map((user) => user.username),
+  ]);
 
-  return listAdminUsernames()
+  return [...usernames]
     .map((username) => {
       const storedUser = storedByUsername.get(normalizeUsername(username));
 
       return {
-        isStored: Boolean(storedUser),
+        isStored: Boolean(storedUser?.passwordHash),
+        lessonFilter: sanitizeLessonFilter(storedUser?.lessonFilter),
         username: storedUser?.username ?? username,
       };
     })
@@ -48,6 +55,7 @@ export async function upsertAdminUserPassword(input: {
     const nextUser: StoredAdminUser = {
       createdAt: previousUser?.createdAt ?? now,
       createdBy: previousUser?.createdBy ?? input.actor,
+      lessonFilter: previousUser?.lessonFilter,
       passwordHash: hashPassword(input.password),
       updatedAt: now,
       updatedBy: input.actor,
@@ -69,6 +77,46 @@ export async function upsertAdminUserPassword(input: {
   });
 }
 
+export async function upsertAdminUserLessonFilter(input: {
+  actor: string;
+  lessonFilter?: Partial<LessonFilter> | null;
+  username: string;
+}) {
+  return withUsersLock(async () => {
+    const now = new Date().toISOString();
+    const normalizedUsername = normalizeUsername(input.username);
+    const users = await readStoredUsers();
+    const existingIndex = users.findIndex(
+      (user) => normalizeUsername(user.username) === normalizedUsername,
+    );
+    const previousUser = existingIndex >= 0 ? users[existingIndex] : null;
+
+    const nextUser: StoredAdminUser = {
+      createdAt: previousUser?.createdAt ?? now,
+      createdBy: previousUser?.createdBy ?? input.actor,
+      lessonFilter: sanitizeLessonFilter(input.lessonFilter),
+      passwordHash: previousUser?.passwordHash,
+      updatedAt: now,
+      updatedBy: input.actor,
+      username: previousUser?.username ?? input.username.trim(),
+    };
+
+    if (existingIndex >= 0) {
+      users[existingIndex] = nextUser;
+    } else {
+      users.push(nextUser);
+    }
+
+    await writeStoredUsers(users);
+
+    return {
+      isStored: true,
+      lessonFilter: sanitizeLessonFilter(nextUser.lessonFilter),
+      username: nextUser.username,
+    };
+  });
+}
+
 async function readStoredUsers() {
   await ensureDataStorage();
 
@@ -77,7 +125,7 @@ async function readStoredUsers() {
     const parsed = JSON.parse(content) as StoredAdminUser[];
 
     return Array.isArray(parsed)
-      ? parsed.filter((user) => user.username && user.passwordHash)
+      ? parsed.filter((user) => user.username)
       : [];
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

@@ -1,16 +1,24 @@
 "use client";
 
-import { Check, KeyRound, LogIn, LogOut, UserPlus } from "lucide-react";
+import { Check, Filter, KeyRound, LogIn, LogOut, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { SiteShell } from "@/components/site-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getAdminSession, loginAdmin, logoutAdmin } from "@/lib/admin-auth-client";
 
+type LessonFilter = {
+  type: "all" | "dancer" | "trainer";
+  value: string;
+};
+
 type AdminUser = {
   isStored: boolean;
+  lessonFilter: LessonFilter;
   username: string;
 };
+
+const emptyLessonFilter: LessonFilter = { type: "all", value: "" };
 
 export function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -18,7 +26,10 @@ export function AdminUsers() {
   const [password, setPassword] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserFilter, setNewUserFilter] =
+    useState<LessonFilter>(emptyLessonFilter);
   const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
+  const [userFilters, setUserFilters] = useState<Record<string, LessonFilter>>({});
   const [sessionUsername, setSessionUsername] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +46,14 @@ export function AdminUsers() {
 
     const data = (await response.json()) as { users: AdminUser[] };
     setUsers(data.users);
+    setUserFilters(
+      Object.fromEntries(
+        data.users.map((user) => [
+          user.username,
+          user.lessonFilter ?? emptyLessonFilter,
+        ]),
+      ),
+    );
   }, []);
 
   useEffect(() => {
@@ -80,7 +99,11 @@ export function AdminUsers() {
     setUsers([]);
   }
 
-  async function saveUserPassword(targetUsername: string, nextPassword: string) {
+  async function saveUser(input: {
+    lessonFilter?: LessonFilter;
+    password?: string;
+    username: string;
+  }) {
     setMessage("");
     setIsSaving(true);
 
@@ -88,10 +111,7 @@ export function AdminUsers() {
       const response = await fetch("/api/admin-users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: nextPassword,
-          username: targetUsername,
-        }),
+        body: JSON.stringify(input),
       });
       const data = (await response.json()) as { message?: string };
 
@@ -110,22 +130,44 @@ export function AdminUsers() {
 
   async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const saved = await saveUserPassword(newUsername, newUserPassword);
+    const saved = await saveUser({
+      lessonFilter: newUserFilter,
+      password: newUserPassword,
+      username: newUsername,
+    });
 
     if (saved) {
       setNewUsername("");
       setNewUserPassword("");
+      setNewUserFilter(emptyLessonFilter);
     }
   }
 
-  async function handleResetPassword(event: FormEvent<HTMLFormElement>, user: AdminUser) {
+  async function handleResetPassword(
+    event: FormEvent<HTMLFormElement>,
+    user: AdminUser,
+  ) {
     event.preventDefault();
     const nextPassword = resetPasswords[user.username] ?? "";
-    const saved = await saveUserPassword(user.username, nextPassword);
+    const saved = await saveUser({
+      password: nextPassword,
+      username: user.username,
+    });
 
     if (saved) {
       setResetPasswords((current) => ({ ...current, [user.username]: "" }));
     }
+  }
+
+  async function handleSaveFilter(
+    event: FormEvent<HTMLFormElement>,
+    user: AdminUser,
+  ) {
+    event.preventDefault();
+    await saveUser({
+      lessonFilter: userFilters[user.username] ?? emptyLessonFilter,
+      username: user.username,
+    });
   }
 
   return (
@@ -158,7 +200,7 @@ export function AdminUsers() {
         </>
       }
       contentClassName="grid gap-6 px-5 py-6 lg:grid-cols-[minmax(320px,420px)_1fr] lg:px-8"
-      description="Seznam uživatelů, vytváření účtů a reset hesel."
+      description="Seznam uživatelů, vytváření účtů, reset hesel a filtry soustředění."
       maxWidthClassName="max-w-[1440px]"
       title="Správa uživatelů"
     >
@@ -212,7 +254,7 @@ export function AdminUsers() {
               <div>
                 <h2 className="text-xl font-semibold">Nový uživatel</h2>
                 <p className="mt-1 text-sm text-[#66706f]">
-                  Heslo se uloží pouze jako scrypt hash.
+                  Heslo se uloží pouze jako scrypt hash. Filtr je volitelný.
                 </p>
               </div>
             </div>
@@ -231,6 +273,10 @@ export function AdminUsers() {
                 required
                 type="password"
                 value={newUserPassword}
+              />
+              <LessonFilterFields
+                filter={newUserFilter}
+                onChange={setNewUserFilter}
               />
               <button
                 className="inline-flex h-11 items-center justify-center rounded-md bg-[#003758] px-4 text-sm font-semibold text-white transition hover:bg-[#0b4d76] disabled:opacity-60"
@@ -252,16 +298,13 @@ export function AdminUsers() {
             <div className="border-b border-[#ded6c9] px-5 py-4">
               <h2 className="text-xl font-semibold">Uživatelé</h2>
               <p className="mt-1 text-sm text-[#66706f]">
-                Zobrazeno {users.length} účtů. Reset hesla vždy uloží nový hash.
+                Zobrazeno {users.length} účtů. Prázdný filtr znamená, že
+                uživatel vidí celé soustředění.
               </p>
             </div>
             <div className="divide-y divide-[#ece3d5]">
               {users.map((user) => (
-                <form
-                  className="grid gap-3 px-5 py-4 lg:grid-cols-[1fr_220px_auto] lg:items-center"
-                  key={user.username}
-                  onSubmit={(event) => handleResetPassword(event, user)}
-                >
+                <div className="grid gap-4 px-5 py-4" key={user.username}>
                   <div>
                     <p className="font-semibold">{user.username}</p>
                     <p className="text-xs text-[#66706f]">
@@ -270,33 +313,115 @@ export function AdminUsers() {
                         : "Výchozí účet z konfigurace"}
                     </p>
                   </div>
-                  <input
-                    className="field-input"
-                    onChange={(event) =>
-                      setResetPasswords((current) => ({
-                        ...current,
-                        [user.username]: event.target.value,
-                      }))
-                    }
-                    placeholder="Nové heslo"
-                    required
-                    type="password"
-                    value={resetPasswords[user.username] ?? ""}
-                  />
-                  <button
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#ded6c9] px-3 text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8] disabled:opacity-60"
-                    disabled={isSaving}
-                    type="submit"
+                  <form
+                    className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_auto] lg:items-end"
+                    onSubmit={(event) => handleResetPassword(event, user)}
                   >
-                    <KeyRound size={15} />
-                    Reset hesla
-                  </button>
-                </form>
+                    <label className="field-label">
+                      Nové heslo
+                      <input
+                        className="field-input mt-1"
+                        onChange={(event) =>
+                          setResetPasswords((current) => ({
+                            ...current,
+                            [user.username]: event.target.value,
+                          }))
+                        }
+                        placeholder="Nové heslo"
+                        required
+                        type="password"
+                        value={resetPasswords[user.username] ?? ""}
+                      />
+                    </label>
+                    <button
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#ded6c9] px-3 text-sm font-semibold text-[#003758] transition hover:bg-[#f6f1e8] disabled:opacity-60"
+                      disabled={isSaving}
+                      type="submit"
+                    >
+                      <KeyRound size={15} />
+                      Reset hesla
+                    </button>
+                  </form>
+                  <form
+                    className="grid gap-3 rounded-md border border-[#ece3d5] bg-[#fcfaf6] p-3 lg:grid-cols-[1fr_auto] lg:items-end"
+                    onSubmit={(event) => handleSaveFilter(event, user)}
+                  >
+                    <LessonFilterFields
+                      filter={userFilters[user.username] ?? emptyLessonFilter}
+                      onChange={(filter) =>
+                        setUserFilters((current) => ({
+                          ...current,
+                          [user.username]: filter,
+                        }))
+                      }
+                    />
+                    <button
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#003758] px-3 text-sm font-semibold text-white transition hover:bg-[#0b4d76] disabled:opacity-60"
+                      disabled={isSaving}
+                      type="submit"
+                    >
+                      <Filter size={15} />
+                      Uložit filtr
+                    </button>
+                  </form>
+                </div>
               ))}
             </div>
           </section>
         </>
       )}
     </SiteShell>
+  );
+}
+
+function LessonFilterFields({
+  filter,
+  onChange,
+}: {
+  filter: LessonFilter;
+  onChange: (filter: LessonFilter) => void;
+}) {
+  return (
+    <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+      <label className="field-label">
+        Filtr soustředění
+        <select
+          className="field-input mt-1"
+          onChange={(event) => {
+            const type = event.target.value as LessonFilter["type"];
+            onChange({
+              type,
+              value: type === "all" ? "" : filter.value,
+            });
+          }}
+          value={filter.type}
+        >
+          <option value="all">Bez omezení</option>
+          <option value="dancer">Tanečník / pár</option>
+          <option value="trainer">Trenér</option>
+        </select>
+      </label>
+      <label className="field-label">
+        Hodnota filtru
+        <input
+          className="field-input mt-1"
+          disabled={filter.type === "all"}
+          onChange={(event) =>
+            onChange({
+              ...filter,
+              value: event.target.value,
+            })
+          }
+          placeholder={
+            filter.type === "trainer"
+              ? "Např. Barča"
+              : filter.type === "dancer"
+                ? "Např. Novákovi"
+                : "Prázdné = vše"
+          }
+          value={filter.value}
+        />
+      </label>
+    </div>
   );
 }
